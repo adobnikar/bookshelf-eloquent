@@ -1,0 +1,29 @@
+{
+  "name": "bookshelf-eloquent",
+  "version": "1.0.0",
+  "description": "Bookshelf extension that adds the functionality of eloquent.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/adobnikar/bookshelf-eloquent.git"
+  },
+  "keywords": [
+    "bookshelf",
+    "eloquent",
+    "extension",
+    "laravel",
+    "whereHas",
+    "where has",
+    "with",
+    "relation"
+  ],
+  "author": "Andraž Dobnikar <andraz.dobnikar@hotmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/adobnikar/bookshelf-eloquent/issues"
+  },
+  "homepage": "https://github.com/adobnikar/bookshelf-eloquent#readme"
+}
