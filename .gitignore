@@ -1,0 +1,35 @@
+# Mac OS X.
+.DS_Store
+.DS_Store?
+
+# Editors: Sublime, IntelliJ IDEA, Visual Studio Code.
+*.sublime-project
+*.sublime-workspace
+.idea/
+.vscode/
+
+# Vim.
+*.swp
+tags
+
+# Nix.
+result
+
+/var
+/node_modules
+/dist
+/test/temp
+/.sass-cache
+/.tmp
+/common/vendor
+/public/scripts/config.js
+/www
+/common/vendor
+ant-build
+
+# Configuration.
+.env
+
+# Miscellaneous.
+TODO
+TODO.txt
