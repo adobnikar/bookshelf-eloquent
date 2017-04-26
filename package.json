@@ -25,5 +25,8 @@
   "bugs": {
     "url": "https://github.com/adobnikar/bookshelf-eloquent/issues"
   },
-  "homepage": "https://github.com/adobnikar/bookshelf-eloquent#readme"
+  "homepage": "https://github.com/adobnikar/bookshelf-eloquent#readme",
+  "devDependencies": {
+    "bookshelf": "^0.10.3"
+  }
 }
