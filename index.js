@@ -28,6 +28,10 @@ module.exports = function(Bookshelf) {
     },
   };
 
+  // ---------------------------------------------------------------------------
+  // ------ Knex Where Methods -------------------------------------------------
+  // ---------------------------------------------------------------------------
+
   // Attach existing "knex where methods" to the model.
   const whereMethods = ['orWhere', 'whereNot', 'whereIn', 'whereNotIn',
     'whereNull', 'whereNotNull', 'whereExists', 'whereNotExists',
@@ -35,6 +39,10 @@ module.exports = function(Bookshelf) {
   ];
   for (let method of whereMethods)
     modelExt[method] = (...args) => { return this.query(method, ...args); };
+
+  // ---------------------------------------------------------------------------
+  // ------ Select, Delete, First, Get -----------------------------------------
+  // ---------------------------------------------------------------------------
 
   /**
    * Helper function that helps to merge the default bookshelf fetch
@@ -46,7 +54,7 @@ module.exports = function(Bookshelf) {
     let withCountColumns = eloquent.withCountColumns;
     let fetchOptions = eloquent.fetchOptions;
 
-    // copy any columns from fetchOptionsButtEnd to fetchOptions
+    // copy any columns from withCountColumns to fetchOptions
     if (withCountColumns.length > 0)	{
       // check if any columns already in the fetchOptions
       if (!('columns' in fetchOptions)) {
@@ -85,6 +93,13 @@ module.exports = function(Bookshelf) {
     this.eloquent.fetchOptions.columns = attrs;
 
     return this;
+  };
+
+  /**
+   * Synonym for destroy.
+   */
+  modelExt.delete = function() {
+    return this.destroy();
   };
 
   /**
@@ -128,9 +143,30 @@ module.exports = function(Bookshelf) {
     return fetchWithEagerLoad.apply(this, [modelFetchAll, options]);
   };
 
-  // ----------------------------------------------------------------------------------
-  // ------ Eager Loading -------------------------------------------------------------
-  // ----------------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // ------ Bookshelf Paranoia Support -----------------------------------------
+  // ---------------------------------------------------------------------------
+
+  modelExt.withDeleted = function() {
+    // Retrieve with soft deleted rows.
+    this.eloquent.fetchOptions.withDeleted = true;
+    // Chainable.
+    return this;
+  };
+
+  /**
+   * Synonym for withDeleted.
+   */
+  modelExt.withTrashed = function() {
+    // Retrieve with soft deleted rows.
+    this.eloquent.fetchOptions.withDeleted = true;
+    // Chainable.
+    return this;
+  };
+
+  // ---------------------------------------------------------------------------
+  // ------ Eager Loading ------------------------------------------------------
+  // ---------------------------------------------------------------------------
 
   async function fetchWithEagerLoad(fetchFunction, options) {
     // Withs wrapper
@@ -649,7 +685,7 @@ module.exports = function(Bookshelf) {
             '=', relationCountName + '.' + foreignKey);
 
           // Push the column to be selected. (use COALESCE because left join produces null values)
-          this.fetchOptionsButtEnd.columns.push(
+          this.eloquent.withCountColumns.columns.push(
             knex.raw('COALESCE(??, ?) as ??',
               [relationCountName, 0, relationCountName]));
 
@@ -668,7 +704,7 @@ module.exports = function(Bookshelf) {
             idAttribute, '=', relationCountName + '.' + foreignKey);
 
           // Push the column to be selected. (use COALESCE because left join produces null values)
-          this.fetchOptionsButtEnd.columns.push(
+          this.eloquent.withCountColumns.columns.push(
             knex.raw('COALESCE(??, ?) as ??',
               [relationCountName, 0, relationCountName]));
 
@@ -683,9 +719,9 @@ module.exports = function(Bookshelf) {
     return this;
   };
 
-  // ----------------------------------------------------------------------------------
-  // ------ Where Has -----------------------------------------------------------------
-  // ----------------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // ------ Where Has ----------------------------------------------------------
+  // ---------------------------------------------------------------------------
 
   // TODO
 
