@@ -20,6 +20,8 @@
     "laravel",
     "whereHas",
     "where has",
+    "withCount",
+    "with count",
     "with",
     "relation"
   ],

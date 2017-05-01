@@ -59,6 +59,7 @@ module.exports = function(Bookshelf) {
       // check if any columns already in the fetchOptions
       if (!('columns' in fetchOptions)) {
         // TODO: test if *, ... works. If it works the error can be removed.
+        // TODO: this will need custom attribute removal.
         // throw new Error('Please define which columns you want to select. This is probably required because you are using the withCount statement.');
         fetchOptions.columns = ['*'];
       }
@@ -637,6 +638,10 @@ module.exports = function(Bookshelf) {
     }
   };
 
+  // ---------------------------------------------------------------------------
+  // ------ With Count ----------------------------------------------------------
+  // ---------------------------------------------------------------------------
+
   /**
    * @param {string|string[]} relationNames List of relations that you want to get the count of.
    */
@@ -670,6 +675,7 @@ module.exports = function(Bookshelf) {
       let foreignKey = relatedData.foreignKey;
       let relationCountName = relationName + 'Count';
 
+      // TODO: belogsTo relation.
       switch (relatedData.type) {
         case 'belongsToMany':
           let joinTableName = relatedData.joinTableName;
@@ -723,7 +729,155 @@ module.exports = function(Bookshelf) {
   // ------ Where Has ----------------------------------------------------------
   // ---------------------------------------------------------------------------
 
-  // TODO
+  /**
+   * Helper function that composes a SQL query given the operator and operands.
+   * @param {string} operator
+   * @param {numeric|string} [operand1]
+   * @param {numeric|string} [operand2]
+   */
+  function composeOperator(operator, operand1 = null, operand2 = null) {
+    // BETWEEN ... AND ...	Check whether a value is within a range of values
+    // =			Equal operator
+    // <=>			NULL-safe equal to operator
+    // >			Greater than operator
+    // >=			Greater than or equal operator
+    // IN()			Check whether a value is within a set of values
+    // IS			Test a value against a boolean
+    // IS NOT			Test a value against a boolean
+    // IS NOT NULL		NOT NULL value test
+    // IS NULL			NULL value test
+    // <			Less than operator
+    // <=			Less than or equal operator
+    // LIKE			Simple pattern matching
+    // NOT BETWEEN ... AND ...	Check whether a value is not within a range of values
+    // !=			Not equal operator
+    // <>			Not equal operator
+    // NOT IN()		Check whether a value is not within a set of values
+    // NOT LIKE		Negation of simple pattern matching
+
+    const operators = {
+      'BETWEEN': ['BETWEEN ? AND ?', 2],
+      '=': ['= ?', 1],
+      '<=>': ['<=> ?', 1],
+      '>': ['> ?', 1],
+      '>=': ['>= ?', 1],
+      'IN': ['IN (?)', 1],
+      'IS': ['IS ?', 1],
+      'IS NOT': ['IS NOT ?', 1],
+      'IS NOT NULL': ['IS NOT NULL', 0],
+      'IS NULL': ['IS NULL', 0],
+      '<': ['< ?', 1],
+      '<=': ['<= ?', 1],
+      'LIKE': ['LIKE ?', 1],
+      'NOT BETWEEN': ['NOT BETWEEN ? AND ?', 2],
+      '!=': ['!= ?', 1],
+      '<>': ['<> ?', 1],
+      'NOT IN': ['NOT IN (?)', 1],
+      'NOT LIKE': ['NOT LIKE ?', 1],
+    };
+
+    // convert the operator to upper case
+    operator = operator.toUpperCase().trim();
+
+    // check if the operator is valid
+    if (!(operator in operators)) {
+      throw new Error("Unknown operator '" + operator + "'.");
+    }
+    let operatorData = operators[operator];
+
+    // build an array of operands
+    let operands = [];
+    if (operand1 !== null) {
+      operands.push(operand1);
+      if (operand2 !== null) {
+        operands.push(operand2);
+      }
+    }
+
+    // check if we have enough operands
+    if (operatorData[1] > operands.length) {
+      throw new Error("Missing operands. Operator '" +
+        operator + "' needs " + operatorData[1] + ' operand(s).');
+    }
+
+    // build the operator query
+    return knex.raw(operatorData[0], operands).toString();
+  };
+
+  /**
+   * Where statement on a related model.
+   * @param {string} relationName Relation name by which we want to filter.
+   * @param {function} [nestedQueryCallback] This filter can be nested.
+   * @param {string} [operator] Filter operator.
+   * @param {numeric|string} [operand1] Filter operand1.
+   * @param {numeric|string} [operand2] Filter operand2.
+   */
+  modelExt.whereHas = function(relationName, nestedQueryCallback = null,
+    operator = null, operand1 = null, operand2 = null) {
+    // validate arguments
+    if (!isString(relationName)) {
+      throw new Error('Must pass a string for the relation argument.');
+    }
+
+    // check if the relation exists
+    if (!(relationName in this)) {
+      // TODO: make this error find the model name from the bookshelf registry plugin (instead of the tableName)
+      throw new Error('Relation ' + relationName +
+        ' does not exist on this model (tableName = ' +
+        knex.raw('??', [this.tableName]).toString() + ').');
+    }
+
+    // get the relation
+    let relation = this[relationName]();
+    let relatedData = relation.relatedData;
+
+    // TODO: support for other rlations.
+    switch (relatedData.type) {
+      case 'belongsToMany':
+        let idAttribute = this.idAttribute;
+        let tableName = this.tableName;
+        let joinTableName = relatedData.joinTableName;
+        let foreignKey = relatedData.foreignKey;
+        let otherKey = relatedData.otherKey;
+
+        // Forge the related model.
+        let relatedModel = relation.model.forge();
+
+        let nestedQuery = relatedModel.query()
+          .join(joinTableName, relatedModel.tableName + '.' +
+            relatedModel.idAttribute, '=', joinTableName + '.' + otherKey)
+          .where(joinTableName + '.' + foreignKey, '=',
+            knex.raw('??.??', [tableName, idAttribute]));
+
+        // Check if a nested callback was passed as an argument.
+        if (nestedQueryCallback !== null) {
+          nestedQueryCallback(relatedModel);
+        }
+
+        if (operator !== null) {
+          // compose the operator string
+          let operatorStr = composeOperator(knex, operator, operand1, operand2);
+
+          // count the subquery
+          nestedQuery.count('*');
+
+          // compare the subquery count with the operator
+          this.query()
+            .whereRaw('(' + nestedQuery.toString() + ') ' + operatorStr);
+        } else {
+          // Attach the where exists query to this model.
+          this.query().whereExists(nestedQuery);
+        }
+
+        break;
+      default:
+        throw new Error('Relation type ' + relatedData.type +
+          ' not supported/implemented for the whereHas statement.');
+    }
+
+    // return the instance of this model
+    return this;
+  };
 
   // Extend the model.
   Bookshelf.Model = Bookshelf.Model.extend(modelExt);
