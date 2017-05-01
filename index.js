@@ -104,13 +104,6 @@ module.exports = function(Bookshelf) {
   };
 
   /**
-   * Synonym for fetch.
-   */
-  modelExt.first = function(...args) {
-    return this.fetch(...args);
-  };
-
-  /**
    * Look at the bookshelf documentation.
    */
   modelExt.fetch = function fetch(options) {
@@ -120,6 +113,11 @@ module.exports = function(Bookshelf) {
     // Call the original fetch function with eager load wrapper.
     return fetchWithEagerLoad.apply(this, [modelFetch, options]);
   };
+
+  /**
+   * Synonym for fetch.
+   */
+  modelExt.first = modelExt.fetch;
 
   /**
    * Synonym for fetchAll.
@@ -158,12 +156,7 @@ module.exports = function(Bookshelf) {
   /**
    * Synonym for withDeleted.
    */
-  modelExt.withTrashed = function() {
-    // Retrieve with soft deleted rows.
-    this.eloquent.fetchOptions.withDeleted = true;
-    // Chainable.
-    return this;
-  };
+  modelExt.withTrashed = modelExt.withDeleted;
 
   // ---------------------------------------------------------------------------
   // ------ Eager Loading ------------------------------------------------------
@@ -887,6 +880,7 @@ module.exports = function(Bookshelf) {
   // For each extension method we need a way to call it statically.
   for (let method in modelExt) {
     if (!modelExt.hasOwnProperty(method)) continue;
+    if (method === 'delete') continue;
     staticModelExt[method] = (...args) => {
       return this.forge()[method](...args);
     };
@@ -903,6 +897,119 @@ module.exports = function(Bookshelf) {
     if (!isFunction(modelInstance.scope))
       throw new Error('Sorry, scope is not a function on this model.');
     return modelInstance.scope(user);
+  };
+
+  // ---------------------------------------------------------------------------
+  // ------ Bookshelf Modelbase Extension --------------------------------------
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Select a collection based on a query
+   * @param {Object} [query]
+   * @param {Object} [options] Options used of model.fetchAll
+   * @return {Promise(bookshelf.Collection)} Bookshelf Collection of Models
+   */
+  staticModelExt.findAll = function(filter, options) {
+    return this.forge().where(extend({}, filter)).fetchAll(options);
+  };
+
+  /**
+   * Find a model based on it's ID
+   * @param {String} id The model's ID
+   * @param {Object} [options] Options used of model.fetch
+   * @return {Promise(bookshelf.Model)}
+   */
+  staticModelExt.findById = function(id, options) {
+    return this.findOne({[this.prototype.idAttribute]: id}, options);
+  };
+
+  /**
+   * Select a model based on a query
+   * @param {Object} [query]
+   * @param {Object} [options] Options for model.fetch
+   * @param {Boolean} [options.require=false]
+   * @return {Promise(bookshelf.Model)}
+   */
+  staticModelExt.findOne = function(query, options) {
+    options = extend({require: true}, options);
+    return this.forge(query).fetch(options);
+  };
+
+  /**
+   * Insert a model based on data
+   * @param {Object} data
+   * @param {Object} [options] Options for model.save
+   * @return {Promise(bookshelf.Model)}
+   */
+  staticModelExt.create = function(data, options) {
+    return this.forge(data).save(null, options);
+  };
+
+  /**
+   * Update a model based on data
+   * @param {Object} data
+   * @param {Object} options Options for model.fetch and model.save
+   * @param {String|Integer} options.id The id of the model to update
+   * @param {Boolean} [options.patch=true]
+   * @param {Boolean} [options.require=true]
+   * @return {Promise(bookshelf.Model)}
+   */
+  staticModelExt.update = function(data, options) {
+    options = extend({patch: true, require: true}, options);
+    return this.forge({[this.prototype.idAttribute]: options.id}).fetch(options)
+      .then(function(model) {
+        return model ? model.save(data, options) : undefined;
+      });
+  };
+
+  /**
+   * Destroy a model by id
+   * @param {Object} options
+   * @param {String|Integer} options.id The id of the model to destroy
+   * @param {Boolean} [options.require=false]
+   * @return {Promise(bookshelf.Model)} empty model
+   */
+  staticModelExt.destroy = function(options) {
+    options = extend({require: true}, options);
+    return this.forge({[this.prototype.idAttribute]: options.id})
+      .destroy(options);
+  };
+
+  /**
+   * Synonym for destroy;
+   */
+  staticModelExt.delete = staticModelExt.destroy;
+
+  /**
+   * Select a model based on data and insert if not found
+   * @param {Object} data
+   * @param {Object} [options] Options for model.fetch and model.save
+   * @param {Object} [options.defaults] Defaults to apply to a create
+   * @return {Promise(bookshelf.Model)} single Model
+   */
+  staticModelExt.findOrCreate = function(data, options) {
+    return this.findOne(data, extend(options, {require: false}))
+      .bind(this)
+      .then(function(model) {
+        let defaults = options && options.defaults;
+        return model || this.create(extend(defaults, data), options);
+      });
+  };
+
+  /**
+   * Select a model based on data and update if found, insert if not found
+   * @param {Object} selectData Data for select
+   * @param {Object} updateData Data for update
+   * @param {Object} [options] Options for model.save
+   */
+  staticModelExt.upsert = function(selectData, updateData, options) {
+    let _this = this;
+    return this.findOne(selectData, extend(options, {require: false}))
+      .then(function(model) {
+        return model ?
+          model.save(updateData, extend({patch: true}, options)) :
+          _this.create(extend(selectData, updateData), options);
+      });
   };
 
   // Extend the model.
