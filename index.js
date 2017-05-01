@@ -639,7 +639,7 @@ module.exports = function(Bookshelf) {
   };
 
   // ---------------------------------------------------------------------------
-  // ------ With Count ----------------------------------------------------------
+  // ------ With Count ---------------------------------------------------------
   // ---------------------------------------------------------------------------
 
   /**
@@ -879,6 +879,32 @@ module.exports = function(Bookshelf) {
     return this;
   };
 
+  // ---------------------------------------------------------------------------
+  // ------ Static Methods -----------------------------------------------------
+  // ---------------------------------------------------------------------------
+
+  let staticModelExt = {};
+  // For each extension method we need a way to call it statically.
+  for (let method in modelExt) {
+    if (!modelExt.hasOwnProperty(method)) continue;
+    staticModelExt[method] = (...args) => {
+      return this.forge()[method](...args);
+    };
+  }
+
+  // ---------------------------------------------------------------------------
+  // ------ Custom User Scope Filter -------------------------------------------
+  // ---------------------------------------------------------------------------
+
+  staticModelExt.scope = function(user) {
+    let modelInstance = this.forge();
+    if (!('scope' in modelInstance))
+      throw new Error('Sorry, scope is not a function on this model.');
+    if (!isFunction(modelInstance.scope))
+      throw new Error('Sorry, scope is not a function on this model.');
+    return modelInstance.scope(user);
+  };
+
   // Extend the model.
-  Bookshelf.Model = Bookshelf.Model.extend(modelExt);
+  Bookshelf.Model = Bookshelf.Model.extend(modelExt, staticModelExt);
 };
