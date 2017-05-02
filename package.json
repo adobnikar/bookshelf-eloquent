@@ -36,6 +36,7 @@
   },
   "dependencies": {
     "lodash": "^4.17.4",
+    "memoizee": "^0.4.4",
     "xtend": "^4.0.1"
   }
 }
