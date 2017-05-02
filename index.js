@@ -3,21 +3,27 @@
 // xtend is a basic utility library which allows you to extend an object by appending all of the properties
 // from each object in a list. When there are identical properties, the right-most property takes precedence.
 const extend = require('xtend');
+const memo = require('memoizee');
+
 const isString = require('lodash/isString');
 const isArray = require('lodash/isArray');
 const isFunction = require('lodash/isFunction');
+const union = require('lodash/union');
+const at = require('lodash/at');
 
 // Eloquent plugin -
 // Adds the functionality and function names of eloquent (like whereHas).
 // -----
 module.exports = function(Bookshelf) {
-  const proto  = Bookshelf.Model.prototype;
+  const modelProto  = Bookshelf.Model.prototype;
+  const collectionProto = Bookshelf.Collection.prototype;
   const knex = Bookshelf.knex;
 
   // Extract all methods that will be overridden.
-  const modelGet = proto.get;
-  const modelFetch = proto.fetch;
-  const modelFetchAll = proto.fetchAll;
+  const modelGet = modelProto.get;
+  const modelFetch = modelProto.fetch;
+  const modelFetchAll = modelProto.fetchAll;
+  const collectionAdd = collectionProto.add;
 
   // Build the extension object.
   let modelExt = {
@@ -1014,4 +1020,273 @@ module.exports = function(Bookshelf) {
 
   // Extend the model.
   Bookshelf.Model = Bookshelf.Model.extend(modelExt, staticModelExt);
+
+  // ---------------------------------------------------------------------------
+  // ------ Extend the Collection ----------------------------------------------
+  // ---------------------------------------------------------------------------
+
+  let collectionExt = {};
+
+  // ---------------------------------------------------------------------------
+  // ------ Add ----------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Similar to the add function but it returns the created model instead of the collection (it is not chainable).
+   * @param {object} attrs Same as the model forge "attributes" parameter.
+   * @param {object} options Same as the model forge options.
+   */
+  collectionExt.add = function(attrs, options) {
+    // Forge the new model.
+    let model = this.model.forge(attrs, options);
+
+    // Add this model to the collection.
+    collectionAdd.apply(this, [model]);
+
+    // Return this model.
+    return model;
+  };
+
+  /**
+   * If we try to add another model with same "attrs" argument
+   * it won't create a duplicate and will return the existing one.
+   * @param {object} attrs Same as the model forge "attributes" parameter.
+   * @param {object} options Same as the model forge options.
+   */
+  collectionExt.addMemo = memo(this.add, {
+    length: 1,
+    normalizer: function(args) {
+      // "args" is arguments object as accessible in memoized function.
+      // NOTE: If the database collation is case insensitive then it is good to use toLowerCase().
+      return JSON.stringify(args[0]).toLowerCase();
+    },
+  });
+
+  // ---------------------------------------------------------------------------
+  // ------ Bulk Insert --------------------------------------------------------
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Bulk insert. Inserts all the models in the collection to the database.
+   * By setting the ignoreDuplicates parameter to true you skip inserting the rows with a duplicate uniq key.
+   * TODO: maybe add the option for batch processing (it could happen that queries get too long when inserting lots of models)
+   * @param {boolean} ignoreDuplicates
+   */
+  collectionExt.insert = function(ignoreDuplicates = false) {
+    // Check if any model to insert at all.
+    if (this.models.length <= 0)
+      return Promise.all([]);
+
+    // Build the knex query.
+    let idAttribute = this.idAttribute();
+    let data = this.models.map(function(model) { return model.attributes; });
+    let knexQuery = knex.insert(data)
+      .into(this.tableName()).returning(idAttribute);
+
+    // Check if we should ignore duplicate rows/models.
+    if (ignoreDuplicates) {
+      // hack the toSQL function
+      knexQuery._toSQLHack = knexQuery.toSQL;
+      knexQuery.toSQL = function(...args) {
+        // call the original toSQL function
+        let sqlQuery = knexQuery._toSQLHack(...args);
+
+        // check if this SQL query begins with an "insert"
+        let sqlBegin = sqlQuery.sql.substring(0, 6).toLowerCase();
+        if (sqlBegin !== 'insert')
+          throw new Error('This SQL statement cannot have ' +
+            "'on duplicate key update' appended. (\"" + sqlQuery.sql + '")');
+
+        // modify the SQL query - add the "on duplicate key update"
+        sqlQuery.sql = sqlQuery.sql + ' on duplicate key update ' +
+          knex.raw('??=??', [idAttribute, idAttribute]).toString();
+
+        // return the modified SQL query
+        return sqlQuery;
+      };
+    }
+
+    // Execute the bulk insert.
+    return knexQuery
+      .returning(idAttribute)
+      .bind(this)
+      .map(function(id, index) {
+        // TODO: create a fallback or improvements for other databases (example: PostgreSQL)
+        // If we bulk insert the rows without ignoring the duplicates we get back the first id.
+        // We can calculate the ids for all the new models from the first id.
+        if (!ignoreDuplicates && (index === 0) && Number.isInteger(id)) {
+          for (let inx = 0; inx < this.length; inx++) {
+            let model = this.at(inx);
+            model.set(idAttribute, id);
+            this._byId[id] = model;
+            // increment the id
+            id++;
+          }
+        }
+      })
+      .return(this);
+  };
+
+  /**
+   * Select [selectAttrs] from the table by the [uniqKeyAttrs] instead of the default id.
+   * Not really useful for anything else than being a helper function for insertBy.
+   * NOTE: the sequence of [uniqKeyAttrs] is important and should be the same as on the unique key in the database for best performance.
+   * @param {string|string[]} uniqKeyAttrs List of unique key attributes.
+   * @param {string|string[]} selectAttrs List of attributes that you want to get from database.
+   */
+  collectionExt.selectBy = function(uniqKeyAttrs = [], selectAttrs = []) {
+    // validate arguments
+    if (isString(uniqKeyAttrs)) uniqKeyAttrs = [uniqKeyAttrs];
+    if (uniqKeyAttrs.constructor !== Array)
+      throw new Error('Must pass an array or string for the ' +
+        'uniqKeyAttrs argument.');
+    if (uniqKeyAttrs.length < 1)
+      throw new Error('The array of uniqKeyAttrs must be at ' +
+        'least of length 1.');
+
+    if (isString(selectAttrs)) selectAttrs = [selectAttrs];
+    if (selectAttrs.constructor !== Array)
+      throw new Error('Must pass an array or string for the ' +
+        'selectAttrs argument.');
+
+    // Get the list of all columns that will be used in the select.
+    let idAttribute = this.idAttribute();
+    let allColumns = union(uniqKeyAttrs, selectAttrs);
+
+    // build the knex query
+    let knexQuery = knex.select(allColumns).from(this.tableName());
+
+    // build the where statement and a model index
+    let whereMap = new Map();
+    let pathKeys = uniqKeyAttrs.slice(0);
+    let leafColumn = pathKeys.pop();
+    let index = new Map();
+
+    // loop through all the models - group the models by non-leaf columns of the uniq key
+    for (let model of this.models) {
+      // get the non-leaf values and the leaf value
+      let uniqPath = _.at(model.attributes, pathKeys);
+      let leafValue = model.attributes[leafColumn];
+      let uniqValues = uniqPath.slice(0);
+      uniqValues.push(leafValue);
+
+      // calculate the uniq hash of this wherePath
+      let uniqPathHash = JSON.stringify(uniqPath);
+      // TODO: if the collation is case insensitive the it is good to use toLowerCase()
+      let uniqHash = JSON.stringify(uniqValues).toLowerCase();
+
+      // add the model to the index
+      if (index.has(uniqHash))
+        throw new Error('This collection has models duplicate unique keys. ' +
+          'SelectBy cannot be performed.');
+      index.set(uniqHash, model);
+
+      // check if this uniq path already present in the whereMap
+      if (!whereMap.has(uniqPathHash))
+        whereMap.set(uniqPathHash, {path: uniqPath, values: new Set()});
+
+      // insert the leaf value into the whereMap
+      whereMap.get(uniqPathHash).values.add(leafValue);
+    }
+
+    // add the where statements to the query
+    let first = true;
+    for (let [key, wherePath] of whereMap) {
+      // add the where statements for the path
+      let subFirst = true;
+      for (let i = 0; i < pathKeys.length; i++) {
+        let column = pathKeys[i];
+        let value = wherePath.path[i];
+        if (subFirst && !first) knexQuery.orWhere(column, value);
+        else knexQuery.where(column, value);
+        subFirst =  false;
+      }
+
+      // add the whereIn statement for the leaf values
+      let leafValues = Array.from(wherePath.values);
+      if (subFirst && !first) knexQuery.orWhereIn(leafColumn, leafValues);
+      else knexQuery.whereIn(leafColumn, leafValues);
+      first = false;
+    }
+
+    // execute the bulk select
+    return knexQuery
+      .bind(this)
+      .map(function(row) {
+        // calculate the unique hash of this row
+        let uniqValues = at(row, uniqKeyAttrs);
+        // NOTE: If the collation is case insensitive the it is good to use toLowerCase().
+        let uniqHash = JSON.stringify(uniqValues).toLowerCase();
+
+        // check if a model with this hash exists - sanity check
+        if (!index.has(uniqHash))
+          throw new Error('The SelectBy query somehow got a row ' +
+            'back that was not even requested.');
+
+        // get the model to update
+        let model = index.get(uniqHash);
+
+        // update the model with the selected values
+        model.set(row);
+
+        // if the model idAttribute was also selected then we also need to update the _byId index
+        if (idAttribute in row) {
+          let id = row[idAttribute];
+          this._byId[id] = model;
+        }
+      })
+      .return(this);
+  };
+
+  /**
+   * insertBy is a combination of insert and selectBy.
+   *  - fisrt a selectBy is performed to ensure that we insert as little duplicates as possible (to keep the auto-increment down)
+   * 	- then the insert with ignoreDuplicates = true is performed (only for the models we havent found in the database)
+   * 	- finally another selectBy is done for the models that were just inserted to get their [returnAttrs]
+   * NOTE: if the table's id attribute is missing in the [returnAttrs] it will be automatically added
+   * @param {string|string[]} uniqKeyAttrs List of unique key attributes.
+   * @param {string|string[]} returnAttrs List of attributes that you want to get from database.
+   */
+  collectionExt.insertBy = function(uniqKeyAttrs = [], returnAttrs = []) {
+    // validate arguments (uniqKeyAttrs will be validated by the selectBy function)
+    if (isString(returnAttrs)) returnAttrs = [returnAttrs];
+    if (returnAttrs.constructor !== Array)
+      throw new Error('Must pass an array or string for ' +
+        'the selectAttrs argument.');
+
+    // get the tables id
+    let idAttribute = this.idAttribute();
+
+    // add the idAttribute to the returnAttrs - because we need the isNew() function on each model to work
+    returnAttrs = union(returnAttrs, [idAttribute]);
+
+    // first perform a selectBy to get the existing models
+    return this.selectBy(uniqKeyAttrs, returnAttrs).then(function(collection) {
+      // create a new collection for the models that need to be inserted
+      let insertCollection = this.model.collection();
+
+      // insert the models that are new into insertCollection
+      for (let model of collection.models) {
+        if (model.isNew()) insertCollection.add(model);
+      }
+
+      // if there are 0 models to insert the finish immediately
+      if (insertCollection.length < 1)
+        // return this - this function is chainable
+        return this;
+
+      // insert the models and ignore duplicates
+      return insertCollection.insert(true).then(function(insertCollection) {
+        // after the models are inserted we have to get their returnAttrs
+        return this.selectBy(uniqKeyAttrs, returnAttrs)
+          .then(function(insertCollection) {
+            // finally return the original collection
+            // return this - this function is chainable
+            return this;
+          });
+      });
+    });
+  };
+
+  Bookshelf.Collection = Bookshelf.Collection.extend(collectionExt);
 };
