@@ -32,6 +32,12 @@ module.exports = function(Bookshelf) {
       withCountColumns: [],
       withs: {},
     },
+
+    constructor: function() {
+      modelProto.constructor.apply(this, arguments);
+      const options = arguments[1] || {};
+      this.caseSensitive = (options.caseSensitive === true);
+    },
   };
 
   // ---------------------------------------------------------------------------
@@ -371,24 +377,28 @@ module.exports = function(Bookshelf) {
     let foreignKeyIndex = {};
     for (let relatedModel of relatedModels.models) {
       if (!(relatedIdAttribute in relatedModel.attributes)) {
-        throw new Error('If you want to perform a with statement on a related model then its id needs to be selected.');
+        throw new Error('If you want to perform a with statement on a ' +
+          'related model then its id needs to be selected.');
       }
       if (!(relatedFkAttribute in relatedModel.attributes)) {
-        throw new Error('If you want to perform a with statement on a related model then its foreign key needs to be selected.');
+        throw new Error('If you want to perform a with statement on a ' +
+          'related model then its foreign key needs to be selected.');
       }
 
       let foreignKeyValue = relatedModel.attributes[relatedFkAttribute];
       if (!(foreignKeyValue in foreignKeyIndex)) {
         foreignKeyIndex[foreignKeyValue] = [];
       }
-      foreignKeyIndex[foreignKeyValue].push(relatedModel.attributes[relatedIdAttribute]);
+      foreignKeyIndex[foreignKeyValue]
+        .push(relatedModel.attributes[relatedIdAttribute]);
     }
 
     // index the relatedModels by their ids
     let relatedModelIndex = {};
     for (let relatedModel of relatedModels.models) {
       // insert the related model into the index
-      relatedModelIndex[relatedModel.attributes[relatedIdAttribute]] = relatedModel;
+      relatedModelIndex[relatedModel.attributes[relatedIdAttribute]] =
+        relatedModel;
     }
 
     // attach the relatedModels to the model(s)
@@ -440,7 +450,8 @@ module.exports = function(Bookshelf) {
     // extract the foreignKey for each model
     for (let model of collection.models) {
       if (!(relatedFkAttribute in model.attributes)) {
-        throw new Error('If you want to perform a with statement on a model then its foreign key needs to be selected.');
+        throw new Error('If you want to perform a with statement on a model ' +
+          'then its foreign key needs to be selected.');
       }
 
       // push the model.foreignKey into the collection of ids
@@ -459,11 +470,13 @@ module.exports = function(Bookshelf) {
     let relatedModelIndex = {};
     for (let relatedModel of relatedModels.models) {
       if (!(relatedIdAttribute in relatedModel.attributes)) {
-        throw new Error('If you want to perform a with statement on a related model then its id needs to be selected.');
+        throw new Error('If you want to perform a with statement on a ' +
+          'related model then its id needs to be selected.');
       }
 
       // insert the related model into the index
-      relatedModelIndex[relatedModel.attributes[relatedIdAttribute]] = relatedModel;
+      relatedModelIndex[relatedModel.attributes[relatedIdAttribute]] =
+        relatedModel;
     }
 
     // attach the relatedModels to the model(s)
@@ -1058,7 +1071,9 @@ module.exports = function(Bookshelf) {
     normalizer: function(args) {
       // "args" is arguments object as accessible in memoized function.
       // NOTE: If the database collation is case insensitive then it is good to use toLowerCase().
-      return JSON.stringify(args[0]).toLowerCase();
+      // TODO: test this if
+      if (this.model.caseSensitive === true) return JSON.stringify(args[0]);
+      else return JSON.stringify(args[0]).toLowerCase();
     },
   });
 
@@ -1165,15 +1180,17 @@ module.exports = function(Bookshelf) {
     // loop through all the models - group the models by non-leaf columns of the uniq key
     for (let model of this.models) {
       // get the non-leaf values and the leaf value
-      let uniqPath = _.at(model.attributes, pathKeys);
+      let uniqPath = at(model.attributes, pathKeys);
       let leafValue = model.attributes[leafColumn];
       let uniqValues = uniqPath.slice(0);
       uniqValues.push(leafValue);
 
       // calculate the uniq hash of this wherePath
       let uniqPathHash = JSON.stringify(uniqPath);
-      // TODO: if the collation is case insensitive the it is good to use toLowerCase()
-      let uniqHash = JSON.stringify(uniqValues).toLowerCase();
+      // NOTE: if the collation is case insensitive the it is good to use toLowerCase()
+      let uniqHash = JSON.stringify(uniqValues);
+      // TODO: test this if
+      if (this.model.caseSensitive !== true) uniqHash = uniqHash.toLowerCase();
 
       // add the model to the index
       if (index.has(uniqHash))
@@ -1216,7 +1233,10 @@ module.exports = function(Bookshelf) {
         // calculate the unique hash of this row
         let uniqValues = at(row, uniqKeyAttrs);
         // NOTE: If the collation is case insensitive the it is good to use toLowerCase().
-        let uniqHash = JSON.stringify(uniqValues).toLowerCase();
+        let uniqHash = JSON.stringify(uniqValues);
+        // TODO: test this if
+        if (this.model.caseSensitive !== true)
+          uniqHash = uniqHash.toLowerCase();
 
         // check if a model with this hash exists - sanity check
         if (!index.has(uniqHash))
