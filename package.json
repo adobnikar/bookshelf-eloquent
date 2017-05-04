@@ -32,7 +32,12 @@
   },
   "homepage": "https://github.com/adobnikar/bookshelf-eloquent#readme",
   "devDependencies": {
-    "bookshelf": "^0.10.3"
+    "bcrypt": "^1.0.2",
+    "bookshelf": "^0.10.3",
+    "bookshelf-paranoia": "^0.11.0",
+    "dotenv": "^4.0.0",
+    "knex": "^0.13.0",
+    "mysql": "^2.13.0"
   },
   "dependencies": {
     "lodash": "^4.17.4",
