@@ -8,7 +8,7 @@
   ],
   "scripts": {
     "migrate": "./node_modules/knex/bin/cli.js migrate:rollback && ./node_modules/knex/bin/cli.js migrate:latest && ./node_modules/knex/bin/cli.js seed:run",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node test.js"
   },
   "repository": {
     "type": "git",
