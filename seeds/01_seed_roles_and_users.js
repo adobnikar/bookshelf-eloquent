@@ -41,30 +41,35 @@ async function createUser(firstName, lastName, username, password, studentId) {
 exports.seed = async function(knex, Promise) {
   // Create roles.
   let roleCollection = Role.collection();
-  let adminRole = roleCollection.forgeAdd({
+  let adminRole = roleCollection.add({
     name: 'admin',
     displayName: 'Administrator',
     description: 'Built-in administrator role. This user has access to the admin panel.',
   });
-  let studentRole = roleCollection.forgeAdd({
+  let studentRole = roleCollection.add({
     name: 'student',
     displayName: 'Student',
     description: 'Student role. This user can join groups and solve exercises.',
   });
-  let groupAdminRole = roleCollection.forgeAdd({
+  let groupAdminRole = roleCollection.add({
     name: 'admin.group',
     displayName: 'Group Administrator',
     description: 'Group admin role. This user can create a group and manage it.',
   });
-  let deviceAdminRole = roleCollection.forgeAdd({
+  let deviceAdminRole = roleCollection.add({
     name: 'admin.device',
     displayName: 'Device Administrator',
     description: 'Device admin role. This user can register new tablets and manage them.',
   });
-  let userAdminRole = roleCollection.forgeAdd({
+  let userAdminRole = roleCollection.add({
     name: 'admin.user',
     displayName: 'User Administrator',
     description: 'User admin role. This is the most powerful role. This user can create new users or admins and assign them roles.',
+  });
+  let superAdminRole = roleCollection.add({
+    name: 'admin.super',
+    displayName: 'Super Administrator',
+    description: 'Super admin role.',
   });
 
   // Insert the roles to the database.
@@ -76,25 +81,28 @@ exports.seed = async function(knex, Promise) {
     groupAdminRole.roles().detach(),
     deviceAdminRole.roles().detach(),
     userAdminRole.roles().detach(),
+    adminRole.roles().detach(),
+    superAdminRole.roles().detach(),
   ]);
   await Promise.all([
     groupAdminRole.roles().attach([adminRole.attributes.id]),
     deviceAdminRole.roles().attach([adminRole.attributes.id]),
     userAdminRole.roles().attach([adminRole.attributes.id]),
+    superAdminRole.roles().attach([groupAdminRole.attributes.id, userAdminRole.attributes.id, deviceAdminRole.attributes.id]),
   ]);
 
   // Create users.
   let userCollection = User.collection();
-  let adminUser = userCollection.forgeAdd(await createUser('Admin', 'User', 'admin', null, null));
-  let groupAdminUser = userCollection.forgeAdd(await createUser('Group Admin', 'User', 'admin.group', null, null));
-  let deviceAdminUser = userCollection.forgeAdd(await createUser('Device Admin', 'User', 'admin.device', null, null));
-  let userAdminUser = userCollection.forgeAdd(await createUser('User Admin', 'User', 'admin.user', null, null));
-  let superAdminUser = userCollection.forgeAdd(await createUser('Super Admin', 'User', 'admin.super', null, null));
+  let adminUser = userCollection.add(await createUser('Admin', 'User', 'admin', null, null));
+  let groupAdminUser = userCollection.add(await createUser('Group Admin', 'User', 'admin.group', null, null));
+  let deviceAdminUser = userCollection.add(await createUser('Device Admin', 'User', 'admin.device', null, null));
+  let userAdminUser = userCollection.add(await createUser('User Admin', 'User', 'admin.user', null, null));
+  let superAdminUser = userCollection.add(await createUser('Super Admin', 'User', 'admin.super', null, null));
 
-  let studentUser = userCollection.forgeAdd(await createUser('Student', 'User', 'student'));
-  let student2User = userCollection.forgeAdd(await createUser('Student 2', 'User', 'student.2'));
-  let student3User = userCollection.forgeAdd(await createUser('Student 3', 'User', 'student.3'));
-  let student4User = userCollection.forgeAdd(await createUser('Student 4', 'User', 'student.4'));
+  let studentUser = userCollection.add(await createUser('Student', 'User', 'student'));
+  let student2User = userCollection.add(await createUser('Student 2', 'User', 'student.2'));
+  let student3User = userCollection.add(await createUser('Student 3', 'User', 'student.3'));
+  let student4User = userCollection.add(await createUser('Student 4', 'User', 'student.4'));
 
   // Insert the users to the database.
   await userCollection.insert();
@@ -112,7 +120,7 @@ exports.seed = async function(knex, Promise) {
     groupAdminUser.roles().attach([groupAdminRole.attributes.id]),
     deviceAdminUser.roles().attach([deviceAdminRole.attributes.id]),
     userAdminUser.roles().attach([userAdminRole.attributes.id]),
-    superAdminUser.roles().attach([groupAdminRole.attributes.id, deviceAdminRole.attributes.id, userAdminRole.attributes.id]),
+    superAdminUser.roles().attach([superAdminRole.attributes.id, userAdminRole.attributes.id]),
     studentUser.roles().attach([studentRole.attributes.id]),
     student2User.roles().attach([studentRole.attributes.id]),
     student3User.roles().attach([studentRole.attributes.id]),
