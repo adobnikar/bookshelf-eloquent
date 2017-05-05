@@ -37,6 +37,7 @@
     "bookshelf": "^0.10.3",
     "bookshelf-paranoia": "^0.11.0",
     "dotenv": "^4.0.0",
+    "faker": "^4.1.0",
     "knex": "^0.13.0",
     "mysql": "^2.13.0",
     "seedrandom": "^2.4.3"
