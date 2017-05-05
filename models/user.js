@@ -7,6 +7,8 @@ require('./group');
 require('./friend');
 require('./post');
 require('./comment');
+require('./enrolment');
+require('./rating');
 
 module.exports = Bookshelf.model('User', {
   tableName: 'users',
@@ -31,6 +33,14 @@ module.exports = Bookshelf.model('User', {
 
   comments: function() {
     return this.hasMany('Comment', 'createdById');
+  },
+
+  enrolments: function() {
+    return this.hasMany('Enrolment', 'userId');
+  },
+
+  ratings: function() {
+    return this.hasMany('Rating', 'userId');
   },
 
   roles: function() {

@@ -4,6 +4,8 @@ const Bookshelf = require('../bookshelf.js');
 
 require('./user');
 require('./comment');
+require('./tag');
+require('./rating');
 
 module.exports = Bookshelf.model('Post', {
   tableName: 'posts',
@@ -17,7 +19,15 @@ module.exports = Bookshelf.model('Post', {
     return this.hasMany('Comment', 'postId');
   },
 
+  ratings: function() {
+    return this.hasMany('Rating', 'postId');
+  },
+
   createdBy: function() {
     return this.belongsTo('User', 'createdById');
+  },
+
+  tags: function() {
+    return this.belongsToMany('Tag', 'post_has_tags', 'postId', 'tagId');
   },
 });
