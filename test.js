@@ -5,8 +5,8 @@ var path = require('path');
 var scriptName = path.basename(__filename);
 
 // Load .env configuration.
-require(path.resolve(__dirname, '../config/load-dotenv'));
-const testsFolder = path.resolve(__dirname, '../tests');
+require(path.resolve(__dirname, './config/load-dotenv'));
+const testsFolder = path.resolve(__dirname, './tests');
 
 (async () => {
   // Get list of all test scripts. Skip the files ending with "_ignore.js".
