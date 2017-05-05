@@ -28,6 +28,8 @@ exports.seed = async function(knex, Promise) {
   let groupBiology = await createGroup('Biology', superAdmin.id);
   let groupMathematics = await createGroup('Mathematics', superAdmin.id);
   let groupPhysics = await createGroup('Physics', superAdmin.id);
+  let groupFirst = await createGroup('First', superAdmin.id);
+  let groupSecond = await createGroup('Second', superAdmin.id);
 
   await groupCollection.insert();
 };
