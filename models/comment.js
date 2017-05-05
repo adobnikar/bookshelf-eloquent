@@ -3,18 +3,18 @@
 const Bookshelf = require('../bookshelf.js');
 
 require('./user');
-require('./comment');
+require('./post');
 
-module.exports = Bookshelf.model('Post', {
-  tableName: 'posts',
+module.exports = Bookshelf.model('Comment', {
+  tableName: 'comments',
   hasTimestamps: ['createdAt', 'updatedAt'],
   hidden: [
     'deletedAt',
   ],
   softDelete: true,
 
-  comments: function() {
-    return this.hasMany('Comment', 'postId');
+  post: function() {
+    return this.belongsTo('Post', 'postId');
   },
 
   createdBy: function() {
