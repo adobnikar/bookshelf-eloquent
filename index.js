@@ -50,7 +50,7 @@ module.exports = function(Bookshelf) {
     'whereBetween', 'whereNotBetween',
   ];
   for (let method of whereMethods)
-    modelExt[method] = (...args) => { return this.query(method, ...args); };
+    modelExt[method] = function(...args) { return this.query(method, ...args); };
 
   // ---------------------------------------------------------------------------
   // ------ Select, Delete, First, Get -----------------------------------------
@@ -212,7 +212,7 @@ module.exports = function(Bookshelf) {
     };
 
     // get the count of with relations
-    let withsCount = Object.keys(this.withs).length;
+    let withsCount = Object.keys(this.eloquent.withs).length;
     if ((collection.models.length < 1) || (withsCount < 1))
       // no need to get the with relations => just return the result
       return localUnwrap(collection, isSingle);
@@ -233,7 +233,7 @@ module.exports = function(Bookshelf) {
 
     // fetch all withs
     let loadRelationTasks = [];
-    for (let withRelationName in this.withs) {
+    for (let withRelationName in this.eloquent.withs) {
       loadRelationTasks.push(eagerLoadRelation.apply(this,
         [ids, collection, withRelationName]));
     }
@@ -247,7 +247,7 @@ module.exports = function(Bookshelf) {
 
   async function eagerLoadRelation(ids, collection, withRelationName) {
     // get the relatedData
-    let withRelation = this.withs[withRelationName];
+    let withRelation = this.eloquent.withs[withRelationName];
     let relatedData = withRelation.relation.relatedData;
 
     // Apply the relation constraint
@@ -272,7 +272,7 @@ module.exports = function(Bookshelf) {
 
   async function eagerLoadBelongsToManyRelation(ids, collection,
     withRelationName) {
-    let withRelation = this.withs[withRelationName];
+    let withRelation = this.eloquent.withs[withRelationName];
 
     // get the relation, relatedData and relatedQuery
     let relation = withRelation.relation;
@@ -357,7 +357,7 @@ module.exports = function(Bookshelf) {
   };
 
   async function eagerLoadHasManyRelation(ids, collection, withRelationName) {
-    let withRelation = this.withs[withRelationName];
+    let withRelation = this.eloquent.withs[withRelationName];
 
     // get the relation, relatedData and relatedQuery
     let relation = withRelation.relation;
@@ -433,7 +433,7 @@ module.exports = function(Bookshelf) {
   };
 
   async function eagerLoadBelongsToRelation(ids, collection, withRelationName) {
-    let withRelation = this.withs[withRelationName];
+    let withRelation = this.eloquent.withs[withRelationName];
 
     // get the relation, relatedData and relatedQuery
     let relation = withRelation.relation;
@@ -579,7 +579,7 @@ module.exports = function(Bookshelf) {
       let relatedData = relation.relatedData;
 
       // Check if this relation already exists in the withs => if not then create a new related query.
-      if (!(firstRelationName in this.withs)) {
+      if (!(firstRelationName in this.eloquent.withs)) {
         // Check if this is a supported relation
         if ((relatedData.type !== 'belongsToMany') &&
           (relatedData.type !== 'belongsTo') &&
@@ -591,14 +591,14 @@ module.exports = function(Bookshelf) {
         let relatedModel = relatedData.target.forge();
 
         // Add this relation to the withs.
-        this.withs[firstRelationName] = {
+        this.eloquent.withs[firstRelationName] = {
           query: relatedModel,
           relation: relation,
         };
       }
 
       // Get the related query.
-      let relatedQuery = this.withs[firstRelationName].query;
+      let relatedQuery = this.eloquent.withs[firstRelationName].query;
 
       // Get the callback.
       let callback = withRelated[relationName];
@@ -900,7 +900,7 @@ module.exports = function(Bookshelf) {
   for (let method in modelExt) {
     if (!modelExt.hasOwnProperty(method)) continue;
     if (method === 'delete') continue;
-    staticModelExt[method] = (...args) => {
+    staticModelExt[method] = function(...args) {
       return this.forge()[method](...args);
     };
   }
@@ -1050,23 +1050,25 @@ module.exports = function(Bookshelf) {
    * @param {object} options Same as the model forge options.
    */
   collectionExt.add = function(attrs, options) {
-    // Forge the new model.
-    let model = this.model.forge(attrs, options);
+    // If attrs is an array then call add for each element.
+    if (isArray(attrs)) {
+      // Add all models to the collection.
+      for (let model of attrs) this.add(model, options);
+      // Return the whole collection.
+      return this;
+    } else {
+      // Forge the new model.
+      let model = this.model.forge(attrs, options);
 
-    // Add this model to the collection.
-    collectionAdd.apply(this, [model]);
+      // Add this model to the collection.
+      collectionAdd.apply(this, [model]);
 
-    // Return this model.
-    return model;
+      // Return this model.
+      return model;
+    }
   };
 
-  /**
-   * If we try to add another model with same "attrs" argument
-   * it won't create a duplicate and will return the existing one.
-   * @param {object} attrs Same as the model forge "attributes" parameter.
-   * @param {object} options Same as the model forge options.
-   */
-  collectionExt.addMemo = memo(this.add, {
+  const collectionAddMemo = memo(collectionExt.add, {
     length: 1,
     normalizer: function(args) {
       // "args" is arguments object as accessible in memoized function.
@@ -1076,6 +1078,22 @@ module.exports = function(Bookshelf) {
       else return JSON.stringify(args[0]).toLowerCase();
     },
   });
+
+  /**
+   * If we try to add another model with same "attrs" argument
+   * it won't create a duplicate and will return the existing one.
+   * @param {object} attrs Same as the model forge "attributes" parameter.
+   * @param {object} options Same as the model forge options.
+   */
+  collectionExt.addMemo = function(attrs, options) {
+    // If attrs is an array then call add for each element.
+    if (isArray(attrs)) {
+      // Add all models to the collection.
+      for (let model of attrs) collectionAddMemo.apply(this, [model, options]);
+      // Return the whole collection.
+      return this;
+    } else collectionAddMemo.apply(this, [attrs, options]);
+  };
 
   // ---------------------------------------------------------------------------
   // ------ Bulk Insert --------------------------------------------------------
