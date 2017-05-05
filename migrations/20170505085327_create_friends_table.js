@@ -1,7 +1,7 @@
 'use strict';
 
 exports.up = async function(knex, Promise) {
-  await knex.schema.createTable('firends', function(table) {
+  await knex.schema.createTable('friends', function(table) {
     table.charset('utf8');
     table.collate('utf8_unicode_ci');
 
@@ -18,5 +18,5 @@ exports.up = async function(knex, Promise) {
 };
 
 exports.down = async function(knex, Promise) {
-  await knex.schema.dropTable('firends');
+  await knex.schema.dropTable('friends');
 };

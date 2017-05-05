@@ -4,6 +4,7 @@ const Bookshelf = require('../bookshelf.js');
 
 require('./role');
 require('./group');
+require('./friend');
 
 module.exports = Bookshelf.model('User', {
   tableName: 'users',
@@ -22,7 +23,19 @@ module.exports = Bookshelf.model('User', {
     return this.hasMany('Group', 'ownerId');
   },
 
+  posts: function() {
+    return this.hasMany('Post', 'createdById');
+  },
+
   roles: function() {
     return this.belongsToMany('Role', 'user_has_roles', 'userId', 'roleId');
+  },
+
+  friends1: function() {
+    return this.hasMany('Firend', 'userId1');
+  },
+
+  friends2: function() {
+    return this.hasMany('Firend', 'userId2');
   },
 });
