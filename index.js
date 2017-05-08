@@ -27,16 +27,17 @@ module.exports = function(Bookshelf) {
 
   // Build the extension object.
   let modelExt = {
-    eloquent: {
-      fetchOptions: {},
-      withCountColumns: [],
-      withs: {},
-    },
-
     constructor: function() {
       modelProto.constructor.apply(this, arguments);
       const options = arguments[1] || {};
       this.caseSensitive = (options.caseSensitive === true);
+
+      // Add eloquent settings.
+      this.eloquent = {
+        fetchOptions: {},
+        withCountColumns: [],
+        withs: {},
+      };
     },
   };
 
@@ -49,8 +50,11 @@ module.exports = function(Bookshelf) {
     'whereNull', 'whereNotNull', 'whereExists', 'whereNotExists',
     'whereBetween', 'whereNotBetween',
   ];
-  for (let method of whereMethods)
-    modelExt[method] = function(...args) { return this.query(method, ...args); };
+  for (let method of whereMethods) {
+    modelExt[method] = function(...args) {
+      return this.query(method, ...args);
+    };
+  }
 
   // ---------------------------------------------------------------------------
   // ------ Select, Delete, First, Get -----------------------------------------
