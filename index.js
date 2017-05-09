@@ -234,6 +234,9 @@ module.exports = function(Bookshelf) {
   // ---------------------------------------------------------------------------
 
   async function fetchWithEagerLoad(fetchFunction, options) {
+    // TODO: maybe check which columns are required for the
+    // with related functionality before executing the fecth query.
+
     // Withs wrapper
     let result = await fetchFunction.apply(this, [options]);
 
@@ -276,25 +279,51 @@ module.exports = function(Bookshelf) {
       // no need to get the with relations => just return the result
       return localUnwrap(collection, isSingle);
 
-    // build the ids array
-    let ids = [];
-
-    // extract the model id for each model
-    for (let model of collection.models) {
-      if (!(this.idAttribute in model.attributes)) {
-        throw new Error('If you want to perform a with statement on a model ' +
-          'then its id needs to be selected.');
-      }
-
-      // push the model.id into the collection of ids
-      ids.push(model.attributes[this.idAttribute]);
-    }
+    // init ids variable to null
+    let ids = null;
 
     // fetch all withs
     let loadRelationTasks = [];
     for (let withRelationName in this.eloquent.withs) {
-      loadRelationTasks.push(eagerLoadRelation.apply(this,
-        [ids, collection, withRelationName]));
+      // get the relatedData
+      let withRelation = this.eloquent.withs[withRelationName];
+      let relatedData = withRelation.relation.relatedData;
+
+      // Check if parent ids required.
+      if ((ids === null) && ((relatedData.type === 'belongsToMany') ||
+        (relatedData.type === 'hasMany'))) {
+        // Load ids.
+        ids = [];
+        // extract the model id for each model
+        for (let model of collection.models) {
+          if (!(this.idAttribute in model.attributes))
+            throw new Error('If you want to eager load a hasMany or ' +
+              'belongsToMany relation then the model has to have ' +
+              'it\'s id selected.');
+
+          // push the model.id into the collection of ids
+          ids.push(model.attributes[this.idAttribute]);
+        }
+      }
+
+      // Apply the relation constraint
+      switch (relatedData.type)	{
+        case 'belongsToMany':
+          loadRelationTasks.push(eagerLoadBelongsToManyRelation.apply(this,
+            [ids, collection, withRelationName]));
+          break;
+        case 'hasMany':
+          loadRelationTasks.push(eagerLoadHasManyRelation.apply(this,
+            [ids, collection, withRelationName]));
+          break;
+        case 'belongsTo':
+          loadRelationTasks.push(eagerLoadBelongsToRelation.apply(this,
+            [collection, withRelationName]));
+          break;
+        default:
+          throw new Error('Relation type ' + relatedData.type +
+            ' not supported/implemented for the with statement.');
+      }
     }
 
     // Wait for all tasks to complete.
@@ -302,31 +331,6 @@ module.exports = function(Bookshelf) {
 
     // Return the result.
     return localUnwrap(collection, isSingle);
-  };
-
-  async function eagerLoadRelation(ids, collection, withRelationName) {
-    // get the relatedData
-    let withRelation = this.eloquent.withs[withRelationName];
-    let relatedData = withRelation.relation.relatedData;
-
-    // Apply the relation constraint
-    switch (relatedData.type)	{
-      case 'belongsToMany':
-        await eagerLoadBelongsToManyRelation.apply(this,
-          [ids, collection, withRelationName]);
-        break;
-      case 'hasMany':
-        await eagerLoadHasManyRelation.apply(this,
-          [ids, collection, withRelationName]);
-        break;
-      case 'belongsTo':
-        await eagerLoadBelongsToRelation.apply(this,
-          [ids, collection, withRelationName]);
-        break;
-      default:
-        throw new Error('Relation type ' + relatedData.type +
-          ' not supported/implemented for the with statement.');
-    }
   };
 
   async function eagerLoadBelongsToManyRelation(ids, collection,
@@ -436,10 +440,9 @@ module.exports = function(Bookshelf) {
     // build foreignKey and otherKey indexes
     let foreignKeyIndex = new Map();
     for (let relatedModel of relatedModels.models) {
-      if (!(relatedFkAttribute in relatedModel.attributes)) {
+      if (!(relatedFkAttribute in relatedModel.attributes))
         throw new Error('If you want to perform a with statement on a ' +
           'related model then its foreign key needs to be selected.');
-      }
 
       let foreignKeyValue = relatedModel.attributes[relatedFkAttribute];
       if (foreignKeyValue === null) continue;
@@ -475,7 +478,7 @@ module.exports = function(Bookshelf) {
     }
   };
 
-  async function eagerLoadBelongsToRelation(ids, collection, withRelationName) {
+  async function eagerLoadBelongsToRelation(collection, withRelationName) {
     let withRelation = this.eloquent.withs[withRelationName];
 
     // get the relation, relatedData and relatedQuery
@@ -488,38 +491,37 @@ module.exports = function(Bookshelf) {
     let relatedIdAttribute = relatedQuery.idAttribute;
 
     // build the fk ids array
-    let fkIds = [];
+    let fkIds = new Set();
 
     // extract the foreignKey for each model
     for (let model of collection.models) {
-      if (!(relatedFkAttribute in model.attributes)) {
+      if (!(relatedFkAttribute in model.attributes))
         throw new Error('If you want to perform a with statement on a model ' +
           'then its foreign key needs to be selected.');
-      }
 
       // push the model.foreignKey into the collection of ids
-      if (model.attributes[relatedFkAttribute] !== null) {
-        fkIds.push(model.attributes[relatedFkAttribute]);
-      }
+      if (model.attributes[relatedFkAttribute] !== null)
+        fkIds.add(model.attributes[relatedFkAttribute]);
     }
 
     // apply the whereIn constraint to the relatedQuery
-    relatedQuery.whereIn(relatedIdAttribute, fkIds);
+    relatedQuery.whereIn(relatedIdAttribute, Array.from(fkIds));
 
     // fetch from related table
+    relatedQuery.eloquent.relationColumns.push(relatedIdAttribute);
     let relatedModels = await relatedQuery.get();
 
     // index the relatedModels by their ids
-    let relatedModelIndex = {};
+    let relatedModelIndex = new Map();
     for (let relatedModel of relatedModels.models) {
-      if (!(relatedIdAttribute in relatedModel.attributes)) {
+      if (!(relatedIdAttribute in relatedModel.attributes))
         throw new Error('If you want to perform a with statement on a ' +
           'related model then its id needs to be selected.');
-      }
 
       // insert the related model into the index
-      relatedModelIndex[relatedModel.attributes[relatedIdAttribute]] =
-        relatedModel;
+      let relatedIdValue = relatedModel.attributes[relatedIdAttribute];
+      if (relatedIdValue !== null)
+        relatedModelIndex.set(relatedIdValue, relatedModel);
     }
 
     // attach the relatedModels to the model(s)
@@ -527,26 +529,23 @@ module.exports = function(Bookshelf) {
       // add/create the relation
       let newRelation = this[withRelationName]();
 
-      let relatedIdsList = [];
-      if (model.attributes[relatedFkAttribute] !== null) {
-        relatedIdsList.push(model.attributes[relatedFkAttribute]);
-      }
-
       // set the relation to be null by default
       model.attributes[withRelationName] = null;
 
-      for (let relatedId of relatedIdsList) {
-        if (!(relatedId in relatedModelIndex)) continue;
+      if (model.attributes[relatedFkAttribute] === null) continue;
+      let relatedId = model.attributes[relatedFkAttribute];
 
-        let relatedModel = relatedModelIndex[relatedId];
+      if (!relatedModelIndex.has(relatedId)) continue;
+      let relatedModel = relatedModelIndex.get(relatedId);
 
-        // copy over the attributes and previous attributes
-        newRelation.attributes = relatedModel.attributes;
-        newRelation._previousAttributes = relatedModel._previousAttributes;
-
-        // relations attribute should already exist on each model
-        model.relations[withRelationName] = newRelation;
+      // copy over all own properties
+      for (var property in relatedModel) {
+        if (!relatedModel.hasOwnProperty(property)) continue;
+        newRelation[property] = relatedModel[property];
       }
+
+      // relations attribute should already exist on each model
+      model.relations[withRelationName] = newRelation;
     }
   };
 
