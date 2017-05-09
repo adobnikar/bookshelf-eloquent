@@ -8,7 +8,7 @@ exports.up = async function(knex, Promise) {
     table.increments('id').unsigned().primary();
     table.text('text').notNullable();
     table.integer('postId').unsigned().notNullable().references('posts.id').onUpdate('CASCADE').onDelete('CASCADE');
-    table.integer('createdById').unsigned().notNullable().references('users.id').onUpdate('CASCADE').onDelete('RESTRICT');
+    table.integer('createdById').unsigned().nullable().references('users.id').onUpdate('CASCADE').onDelete('RESTRICT');
 
     // Soft delete.
     table.dateTime('deletedAt').nullable().index();

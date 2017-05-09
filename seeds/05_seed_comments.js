@@ -41,7 +41,7 @@ exports.seed = async function(knex, Promise) {
     commentsCollection.add({
       text: faker.lorem.sentence(),
       postId: post.id,
-      createdById: user.id,
+      createdById: (rng.int(5) === 1) ? null : user.id, // A random chance this comment was created by an anonymous user.
       deletedAt: (rng.int(5) === 1) ? (new Date()) : null, // A random chance this comment was deleted.
     });
   }
