@@ -434,7 +434,7 @@ module.exports = function(Bookshelf) {
     relatedQuery.eloquent.relationColumns.push(relatedFkAttribute);
     let relatedModels = await relatedQuery.get();
     // build foreignKey and otherKey indexes
-    let foreignKeyIndex = {};
+    let foreignKeyIndex = new Map();
     for (let relatedModel of relatedModels.models) {
       if (!(relatedIdAttribute in relatedModel.attributes)) {
         throw new Error('If you want to perform a with statement on a ' +
@@ -446,19 +446,19 @@ module.exports = function(Bookshelf) {
       }
 
       let foreignKeyValue = relatedModel.attributes[relatedFkAttribute];
-      if (!(foreignKeyValue in foreignKeyIndex)) {
-        foreignKeyIndex[foreignKeyValue] = [];
-      }
-      foreignKeyIndex[foreignKeyValue]
+      if (!foreignKeyIndex.has(foreignKeyValue))
+        foreignKeyIndex.set(foreignKeyValue, []);
+
+      foreignKeyIndex.get(foreignKeyValue)
         .push(relatedModel.attributes[relatedIdAttribute]);
     }
 
     // index the relatedModels by their ids
-    let relatedModelIndex = {};
+    let relatedModelIndex = new Map();
     for (let relatedModel of relatedModels.models) {
       // insert the related model into the index
-      relatedModelIndex[relatedModel.attributes[relatedIdAttribute]] =
-        relatedModel;
+      relatedModelIndex.set(relatedModel.attributes[relatedIdAttribute],
+        relatedModel);
     }
 
     // attach the relatedModels to the model(s)
@@ -468,14 +468,13 @@ module.exports = function(Bookshelf) {
 
       let relatedIdsList = [];
       let modelId = model.attributes[this.idAttribute];
-      if (modelId in foreignKeyIndex) {
-        relatedIdsList = foreignKeyIndex[modelId];
-      }
+      if (foreignKeyIndex.has(modelId))
+        relatedIdsList = foreignKeyIndex.get(modelId);
 
       for (let relatedId of relatedIdsList) {
-        if (!(relatedId in relatedModelIndex)) continue;
+        if (!relatedModelIndex.has(relatedId)) continue;
 
-        let relatedModel = relatedModelIndex[relatedId];
+        let relatedModel = relatedModelIndex.get(relatedId);
         rModels.push(relatedModel);
         rById[relatedModel.attributes[relatedIdAttribute]] = relatedModel;
         rById[relatedModel.cid] = relatedModel;
