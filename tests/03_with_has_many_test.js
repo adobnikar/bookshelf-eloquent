@@ -93,7 +93,7 @@ exports.test = async function() {
 
   bookResult = (await User.with('posts.comments').get())
     .toJSON().map(removeProto);
-  assert.deepStrictEqual(knexResult, bookResult);
+  assert.deepStrictEqual(bookResult, knexResult);
 
   // With select.
   knexResult = (await knex.select().from(User.prototype.tableName)
@@ -128,7 +128,7 @@ exports.test = async function() {
   bookResult = (await User.withSelect('posts.comments',
     ['text']).get())
     .toJSON().map(removeProto);
-  assert.deepStrictEqual(knexResult, bookResult);
+  assert.deepStrictEqual(bookResult, knexResult);
 
   // Nested with.
   knexResult = (await knex.select().from(User.prototype.tableName)
@@ -168,5 +168,5 @@ exports.test = async function() {
     q.withSelect('comments', 'text');
   }).get())
     .toJSON().map(removeProto);
-  assert.deepStrictEqual(knexResult, bookResult);
+  assert.deepStrictEqual(bookResult, knexResult);
 };

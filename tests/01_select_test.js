@@ -43,7 +43,7 @@ exports.test = async function() {
     knexResult = (await knex.select().from(Model.prototype.tableName))
       .map(resetProto);
     bookResult = (await Model.withDeleted().get()).models.map(modelAttrs);
-    assert.deepStrictEqual(knexResult, bookResult);
+    assert.deepStrictEqual(bookResult, knexResult);
   }
 
   // Get soft delete models.
@@ -51,7 +51,7 @@ exports.test = async function() {
     knexResult = (await knex.select().whereNull('deletedAt')
       .from(Model.prototype.tableName)).map(resetProto);
     bookResult = (await Model.get()).models.map(modelAttrs);
-    assert.deepStrictEqual(knexResult, bookResult);
+    assert.deepStrictEqual(bookResult, knexResult);
   }
 
   // Get non soft delete models.
@@ -59,7 +59,7 @@ exports.test = async function() {
     knexResult = (await knex.select().from(Model.prototype.tableName))
       .map(resetProto);
     bookResult = (await Model.get()).models.map(modelAttrs);
-    assert.deepStrictEqual(knexResult, bookResult);
+    assert.deepStrictEqual(bookResult, knexResult);
   }
 
   // Select some attributes.
@@ -67,12 +67,12 @@ exports.test = async function() {
     .from(Comment.prototype.tableName)).map(resetProto);
   bookResult = (await Comment.select(['text', 'postId'])
     .withDeleted().get()).models.map(modelAttrs);
-  assert.deepStrictEqual(knexResult, bookResult);
+  assert.deepStrictEqual(bookResult, knexResult);
 
   // Select some attributes and id.
   knexResult = (await knex.select(['id', 'text', 'postId'])
     .from(Comment.prototype.tableName)).map(resetProto);
   bookResult = (await Comment.select(['id', 'text', 'postId'])
     .withDeleted().get()).models.map(modelAttrs);
-  assert.deepStrictEqual(knexResult, bookResult);
+  assert.deepStrictEqual(bookResult, knexResult);
 };

@@ -40,14 +40,14 @@ exports.test = async function() {
   knexResult = (await knex.select().from(Post.prototype.tableName)
     .whereNull('deletedAt').where('visible', true)).map(resetProto);
   bookResult = (await Post.where('visible', true).get()).models.map(modelAttrs);
-  assert.deepStrictEqual(knexResult, bookResult);
+  assert.deepStrictEqual(bookResult, knexResult);
 
   // Or where test. (Get all invisible posts)
   knexResult = (await knex.select().from(Post.prototype.tableName)
     .whereNotNull('deletedAt').orWhere('visible', false)).map(resetProto);
   bookResult = (await Post.withDeleted().whereNotNull('deletedAt')
     .orWhere('visible', false).get()).models.map(modelAttrs);
-  assert.deepStrictEqual(knexResult, bookResult);
+  assert.deepStrictEqual(bookResult, knexResult);
 
   // Nested where test.
   knexResult = (await knex(Post.prototype.tableName).where(function() {
@@ -62,7 +62,7 @@ exports.test = async function() {
   }).orWhereLike('text', 'm%')
   .whereIn('id', [1, 2, 3, 4, 5, 6, 7, 8, 9])
   .whereBetween('id', 5, 15).get()).models.map(modelAttrs);
-  assert.deepStrictEqual(knexResult, bookResult);
+  assert.deepStrictEqual(bookResult, knexResult);
 
   const whereMethods = ['orWhere', 'whereNot', 'whereIn', 'whereNotIn',
     'whereNull', 'whereNotNull', 'whereExists', 'whereNotExists',
