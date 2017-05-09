@@ -46,13 +46,57 @@ module.exports = function(Bookshelf) {
   // ---------------------------------------------------------------------------
 
   // Attach existing "knex where methods" to the model.
-  const whereMethods = ['orWhere', 'whereNot', 'whereIn', 'whereNotIn',
+  const whereMethods = ['whereNot', 'whereIn', 'whereNotIn',
     'whereNull', 'whereNotNull', 'whereExists', 'whereNotExists',
-    'whereBetween', 'whereNotBetween',
   ];
   for (let method of whereMethods) {
     modelExt[method] = function(...args) {
       return this.query(method, ...args);
+    };
+  }
+
+  modelExt.whereLike = function(columnName, value) {
+    return this.where(columnName, 'like', value);
+  };
+
+  modelExt.whereNotLike = function(columnName, value) {
+    return this.where(columnName, 'not like', value);
+  };
+
+  // ---------------------------------------------------------------------------
+  // ------ Knex OrWhere Methods -----------------------------------------------
+  // ---------------------------------------------------------------------------
+
+  modelExt.orWhere = function(...args) {
+    return this.query('orWhere', ...args);
+  };
+
+  for (let method of whereMethods) {
+    let orMethodName = 'or' + method.substr(0, 1).toUpperCase() +
+      method.substr(1);
+    modelExt[orMethodName] = function(...args) {
+      return this.query(orMethodName, ...args);
+    };
+  }
+
+  modelExt.orWhereLike = function(columnName, value) {
+    return this.orWhere(columnName, 'like', value);
+  };
+
+  modelExt.orWhereNotLike = function(columnName, value) {
+    return this.orWhere(columnName, 'not like', value);
+  };
+
+  // ---------------------------------------------------------------------------
+  // ------ Knex Where Between Methods -----------------------------------------
+  // ---------------------------------------------------------------------------
+
+  const whereBetweenMethods = ['whereBetween', 'whereNotBetween',
+    'orWhereBetween', 'orWhereNotBetween'];
+  for (let method of whereBetweenMethods) {
+    modelExt[method] = function(columnName, a, b) {
+      if (isArray(a)) return this.query(method, columnName, a);
+      else return this.query(method, columnName, [a, b]);
     };
   }
 
