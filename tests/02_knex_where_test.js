@@ -28,11 +28,6 @@ function resetProto(obj) {
 
 exports.test = async function() {
   // Run the test. This function is required.
-  // List of all models for easier testing.
-  let models = [Comment, Enrolment, Friend, Group, Post, Rating, Role, Tag,
-    User, Empty];
-  let softDeleteModels = [Comment, Group, Post, User];
-  let nonSoftDeleteModels = [Enrolment, Friend, Rating, Role, Tag, Empty];
   let knexResult = null;
   let bookResult = null;
 
