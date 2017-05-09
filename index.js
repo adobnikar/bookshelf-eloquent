@@ -446,6 +446,7 @@ module.exports = function(Bookshelf) {
       }
 
       let foreignKeyValue = relatedModel.attributes[relatedFkAttribute];
+      if (foreignKeyValue === null) continue;
       if (!foreignKeyIndex.has(foreignKeyValue))
         foreignKeyIndex.set(foreignKeyValue, []);
 

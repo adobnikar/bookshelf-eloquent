@@ -67,6 +67,7 @@ exports.test = async function() {
   let knexResultPost = new Map();
   (await knex.select().from(Post.prototype.tableName)
     .whereNull('deletedAt')).map(bookify(Post)).map((e) => {
+      if (e.createdById === null) return;
       if (!knexResultPost.has(e.createdById))
         knexResultPost.set(e.createdById, []);
       knexResultPost.get(e.createdById).push(e);
@@ -74,6 +75,7 @@ exports.test = async function() {
   let knexResultComments = new Map();
   (await knex.select().from(Comment.prototype.tableName)
     .whereNull('deletedAt')).map(bookify(Comment)).map((e) => {
+      if (e.postId === null) return;
       if (!knexResultComments.has(e.postId))
         knexResultComments.set(e.postId, []);
       knexResultComments.get(e.postId).push(e);
@@ -99,6 +101,7 @@ exports.test = async function() {
   knexResultPost = new Map();
   (await knex.select().from(Post.prototype.tableName)
     .whereNull('deletedAt')).map(bookify(Post)).map((e) => {
+      if (e.createdById === null) return;
       if (!knexResultPost.has(e.createdById))
         knexResultPost.set(e.createdById, []);
       knexResultPost.get(e.createdById).push(e);
@@ -107,6 +110,7 @@ exports.test = async function() {
   (await knex.select(union(['text', 'postId'],
     [Comment.prototype.idAttribute])).from(Comment.prototype.tableName)
     .whereNull('deletedAt')).map(bookify(Comment)).map((e) => {
+      if (e.postId === null) return;
       if (!knexResultComments.has(e.postId))
         knexResultComments.set(e.postId, []);
       knexResultComments.get(e.postId).push(e);
@@ -136,6 +140,7 @@ exports.test = async function() {
     .whereNull('deletedAt')
     .where('title', 'not like', 'a%'))
     .map(bookify(Post)).map((e) => {
+      if (e.createdById === null) return;
       if (!knexResultPost.has(e.createdById))
         knexResultPost.set(e.createdById, []);
       knexResultPost.get(e.createdById).push(e);
@@ -144,6 +149,7 @@ exports.test = async function() {
   (await knex.select(union(['text', 'postId'],
     [Comment.prototype.idAttribute])).from(Comment.prototype.tableName)
     .whereNull('deletedAt')).map(bookify(Comment)).map((e) => {
+      if (e.postId === null) return;
       if (!knexResultComments.has(e.postId))
         knexResultComments.set(e.postId, []);
       knexResultComments.get(e.postId).push(e);
