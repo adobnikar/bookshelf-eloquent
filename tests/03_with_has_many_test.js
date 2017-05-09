@@ -107,8 +107,7 @@ exports.test = async function() {
       knexResultPost.get(e.createdById).push(e);
     });
   knexResultComments = new Map();
-  (await knex.select(union(['text', 'postId'],
-    [Comment.prototype.idAttribute])).from(Comment.prototype.tableName)
+  (await knex.select(['text', 'postId']).from(Comment.prototype.tableName)
     .whereNull('deletedAt')).map(bookify(Comment)).map((e) => {
       if (e.postId === null) return;
       if (!knexResultComments.has(e.postId))
@@ -146,8 +145,7 @@ exports.test = async function() {
       knexResultPost.get(e.createdById).push(e);
     });
   knexResultComments = new Map();
-  (await knex.select(union(['text', 'postId'],
-    [Comment.prototype.idAttribute])).from(Comment.prototype.tableName)
+  (await knex.select(['text', 'postId']).from(Comment.prototype.tableName)
     .whereNull('deletedAt')).map(bookify(Comment)).map((e) => {
       if (e.postId === null) return;
       if (!knexResultComments.has(e.postId))
@@ -165,8 +163,7 @@ exports.test = async function() {
     }
   }
 
-  bookResult = (await User.withSelect('posts', [], (q) => {
-    q.select('text');
+  bookResult = (await User.withSelect('posts', ['id', 'text'], (q) => {
     q.whereNotLike('title', 'a%');
     q.withSelect('comments', 'text');
   }).get())

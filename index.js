@@ -120,9 +120,9 @@ module.exports = function(Bookshelf) {
       // Force select relation attributes that are required for the with statement.
       fetchOptions.columns = union(fetchOptions.columns,
         eloquent.relationColumns);
-      // We always want to select the idAttribute so that bookshelf can function normally.
-      fetchOptions.columns = union(fetchOptions.columns,
-        [instance.idAttribute]);
+      // TODO: Do we always want to select the idAttribute so that bookshelf can function normally?
+      // fetchOptions.columns = union(fetchOptions.columns,
+      //  [instance.idAttribute]);
     }
 
     // copy any columns from withCountColumns to fetchOptions
@@ -436,10 +436,6 @@ module.exports = function(Bookshelf) {
     // build foreignKey and otherKey indexes
     let foreignKeyIndex = new Map();
     for (let relatedModel of relatedModels.models) {
-      if (!(relatedIdAttribute in relatedModel.attributes)) {
-        throw new Error('If you want to perform a with statement on a ' +
-          'related model then its id needs to be selected.');
-      }
       if (!(relatedFkAttribute in relatedModel.attributes)) {
         throw new Error('If you want to perform a with statement on a ' +
           'related model then its foreign key needs to be selected.');
@@ -450,16 +446,7 @@ module.exports = function(Bookshelf) {
       if (!foreignKeyIndex.has(foreignKeyValue))
         foreignKeyIndex.set(foreignKeyValue, []);
 
-      foreignKeyIndex.get(foreignKeyValue)
-        .push(relatedModel.attributes[relatedIdAttribute]);
-    }
-
-    // index the relatedModels by their ids
-    let relatedModelIndex = new Map();
-    for (let relatedModel of relatedModels.models) {
-      // insert the related model into the index
-      relatedModelIndex.set(relatedModel.attributes[relatedIdAttribute],
-        relatedModel);
+      foreignKeyIndex.get(foreignKeyValue).push(relatedModel);
     }
 
     // attach the relatedModels to the model(s)
@@ -467,17 +454,13 @@ module.exports = function(Bookshelf) {
       let rModels = [];
       let rById = {};
 
-      let relatedIdsList = [];
       let modelId = model.attributes[this.idAttribute];
       if (foreignKeyIndex.has(modelId))
-        relatedIdsList = foreignKeyIndex.get(modelId);
+        rModels = foreignKeyIndex.get(modelId);
 
-      for (let relatedId of relatedIdsList) {
-        if (!relatedModelIndex.has(relatedId)) continue;
-
-        let relatedModel = relatedModelIndex.get(relatedId);
-        rModels.push(relatedModel);
-        rById[relatedModel.attributes[relatedIdAttribute]] = relatedModel;
+      for (let relatedModel of rModels) {
+        if (relatedIdAttribute in relatedModel.attributes)
+          rById[relatedModel.attributes[relatedIdAttribute]] = relatedModel;
         rById[relatedModel.cid] = relatedModel;
       }
 
