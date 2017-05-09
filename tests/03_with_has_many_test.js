@@ -8,6 +8,7 @@ require('../libs/seedrandom-ext');
 
 const isArray = require('lodash/isArray');
 const union = require('lodash/union');
+const isPlainObject = require('lodash/isPlainObject');
 
 const Comment = require('../models/comment');
 const Enrolment = require('../models/enrolment');
@@ -43,10 +44,14 @@ function bookify(Model) {
 
 function removeProto(obj) {
   obj.__proto__ = null;
+  delete obj.__proto__;
 
   for (let property in obj) {
     if (isArray(obj[property]))
       obj[property] = obj[property].map(removeProto);
+    else if (isPlainObject(obj[property])) {
+      obj[property] = ([obj[property]].map(removeProto)[0]);
+    }
   }
 
   return obj;
