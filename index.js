@@ -36,6 +36,7 @@ module.exports = function(Bookshelf) {
       this.eloquent = {
         fetchOptions: {},
         withCountColumns: [],
+        relationColumns: [],
         withs: {},
       };
     },
@@ -110,9 +111,19 @@ module.exports = function(Bookshelf) {
    * @param {object} eloquent
    * @param {object} options
    */
-  function mergeOptions(eloquent, options) {
+  function mergeOptions(instance, options) {
+    let eloquent = instance.eloquent;
     let withCountColumns = eloquent.withCountColumns;
     let fetchOptions = eloquent.fetchOptions;
+
+    if ('columns' in fetchOptions) {
+      // Force select relation attributes that are required for the with statement.
+      fetchOptions.columns = union(fetchOptions.columns,
+        eloquent.relationColumns);
+      // We always want to select the idAttribute so that bookshelf can function normally.
+      fetchOptions.columns = union(fetchOptions.columns,
+        [instance.idAttribute]);
+    }
 
     // copy any columns from withCountColumns to fetchOptions
     if (withCountColumns.length > 0)	{
@@ -168,7 +179,7 @@ module.exports = function(Bookshelf) {
    */
   modelExt.fetch = function fetch(options) {
     // Attach options that were built by eloquent/this extension.
-    options = mergeOptions(this.eloquent, options);
+    options = mergeOptions(this, options);
 
     // Call the original fetch function with eager load wrapper.
     return fetchWithEagerLoad.apply(this, [modelFetch, options]);
@@ -196,7 +207,7 @@ module.exports = function(Bookshelf) {
    */
   modelExt.fetchAll = function fetchAll(options) {
     // Attach options that were built by eloquent/this extension.
-    options = mergeOptions(this.eloquent, options);
+    options = mergeOptions(this, options);
 
     // Call the original fetchAll function with eager load wrapper.
     return fetchWithEagerLoad.apply(this, [modelFetchAll, options]);
@@ -420,6 +431,7 @@ module.exports = function(Bookshelf) {
     relatedQuery.whereIn(relatedFkAttribute, ids);
 
     // fetch from related table
+    relatedQuery.eloquent.relationColumns.push(relatedFkAttribute);
     let relatedModels = await relatedQuery.get();
     // build foreignKey and otherKey indexes
     let foreignKeyIndex = {};
