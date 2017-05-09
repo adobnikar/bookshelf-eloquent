@@ -297,9 +297,11 @@ module.exports = function(Bookshelf) {
         // extract the model id for each model
         for (let model of collection.models) {
           if (!(this.idAttribute in model.attributes))
-            throw new Error('If you want to eager load a hasMany or ' +
-              'belongsToMany relation then the model has to have ' +
-              'it\'s id selected.');
+            throw new Error('Failed to eager load the "' + withRelationName +
+              '" relation of the "' + this.tableName +
+              '" model. If you want to eager load a hasMany or ' +
+              'belongsToMany relation of a model then the model ' +
+              'needs to have it\'s id column selected.');
 
           // push the model.id into the collection of ids
           ids.push(model.attributes[this.idAttribute]);
@@ -321,7 +323,9 @@ module.exports = function(Bookshelf) {
             [collection, withRelationName]));
           break;
         default:
-          throw new Error('Relation type ' + relatedData.type +
+          throw new Error('Failed to eager load the "' + withRelationName +
+            '" relation of the "' + this.tableName +
+            '" model. Relation type ' + relatedData.type +
             ' not supported/implemented for the with statement.');
       }
     }
@@ -496,8 +500,13 @@ module.exports = function(Bookshelf) {
     // extract the foreignKey for each model
     for (let model of collection.models) {
       if (!(relatedFkAttribute in model.attributes))
-        throw new Error('If you want to perform a with statement on a model ' +
-          'then its foreign key needs to be selected.');
+        throw new Error('Failed to eager load the "' + withRelationName +
+              '" relation of the "' + this.tableName +
+              '" model. If you want to eager load a belongsTo ' +
+              'relation of a model then the model ' +
+              'needs to have the foreign key column selected. ' +
+              'Please add the "' + relatedFkAttribute +
+              '" column to the select statement.');
 
       // push the model.foreignKey into the collection of ids
       if (model.attributes[relatedFkAttribute] !== null)
