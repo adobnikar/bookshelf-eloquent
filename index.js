@@ -358,38 +358,41 @@ module.exports = function(Bookshelf) {
     let pivotRows = await pivotQuery;
 
     // build foreignKey and otherKey indexes
-    let foreignKeyIndex = {};
-    let otherKeyIndex = {};
+    let foreignKeyIndex = new Map();
+    let otherKeySet = new Set();
     for (let pivotRow of pivotRows) {
       let foreignKeyValue = pivotRow[relatedData.foreignKey];
+      if (foreignKeyValue === null) continue;
       let otherKeyValue = pivotRow[relatedData.otherKey];
-      if (!(foreignKeyValue in foreignKeyIndex)) {
-        foreignKeyIndex[foreignKeyValue] = [];
-      }
-      foreignKeyIndex[foreignKeyValue].push(otherKeyValue);
-      otherKeyIndex[otherKeyValue] = 13;
+      if (otherKeyValue === null) continue;
+      if (!foreignKeyIndex.has(foreignKeyValue))
+        foreignKeyIndex.set(foreignKeyValue, []);
+      foreignKeyIndex.get(foreignKeyValue).push(otherKeyValue);
+      otherKeySet.add(otherKeyValue);
     }
 
-    // extract opther ids
-    let otherIds = Object.keys(otherKeyIndex);
-
     // apply the whereIn constraint to the relatedQuery
-    relatedQuery.whereIn(relatedQuery.idAttribute, otherIds);
+    relatedQuery.eloquent.relationColumns.push(relatedIdAttribute);
+    relatedQuery.whereIn(relatedIdAttribute, Array.from(otherKeySet));
 
     // fetch from related table
     let relatedModels = await relatedQuery.get();
 
     // index the relatedModels by their ids
-    let relatedModelIndex = {};
+    let relatedModelIndex = new Map();
     for (let relatedModel of relatedModels.models) {
-      if (!(relatedIdAttribute in relatedModel.attributes)) {
-        throw new Error('If you want to perform a with statement ' +
-          'on a related model then its id needs to be selected.');
-      }
+      if (!(relatedIdAttribute in relatedModel.attributes))
+        throw new Error('Failed to eager load the "' + withRelationName +
+              '" relation of the "' + this.tableName +
+              '" model. If you want to eager load a belongsToMany ' +
+              'relation of a model then the related model ' +
+              'needs to have the id column selected. ' +
+              'Please add the "' + relatedIdAttribute +
+              '" column to the select statement.');
+      let relatedIdValue = relatedModel.attributes[relatedIdAttribute];
 
       // insert the related model into the index
-      relatedModelIndex[relatedModel.attributes[relatedIdAttribute]] =
-        relatedModel;
+      relatedModelIndex.set(relatedIdValue, relatedModel);
     }
 
     // attach the relatedModels to the model(s)
@@ -399,16 +402,17 @@ module.exports = function(Bookshelf) {
 
       let relatedIdsList = [];
       let modelId = model.attributes[this.idAttribute];
-      if (modelId in foreignKeyIndex) {
-        relatedIdsList = foreignKeyIndex[modelId];
-      }
+      if (foreignKeyIndex.has(modelId))
+        relatedIdsList = foreignKeyIndex.get(modelId);
 
       for (let relatedId of relatedIdsList) {
-        if (!(relatedId in relatedModelIndex)) continue;
-
-        let relatedModel = relatedModelIndex[relatedId];
+        if (!relatedModelIndex.has(relatedId)) continue;
+        // Resule the related model.
+        let relatedModel = relatedModelIndex.get(relatedId);
+        // Add the model to the collection.
         rModels.push(relatedModel);
-        rById[relatedModel.attributes[relatedIdAttribute]] = relatedModel;
+        if (relatedIdAttribute in relatedModel.attributes)
+          rById[relatedModel.attributes[relatedIdAttribute]] = relatedModel;
         rById[relatedModel.cid] = relatedModel;
       }
 
@@ -445,8 +449,13 @@ module.exports = function(Bookshelf) {
     let foreignKeyIndex = new Map();
     for (let relatedModel of relatedModels.models) {
       if (!(relatedFkAttribute in relatedModel.attributes))
-        throw new Error('If you want to perform a with statement on a ' +
-          'related model then its foreign key needs to be selected.');
+        throw new Error('Failed to eager load the "' + withRelationName +
+              '" relation of the "' + this.tableName +
+              '" model. If you want to eager load a hasMany ' +
+              'relation of a model then it\'s related model ' +
+              'needs to have the foreign key column selected. ' +
+              'Please add the "' + relatedFkAttribute +
+              '" column to the select statement.');
 
       let foreignKeyValue = relatedModel.attributes[relatedFkAttribute];
       if (foreignKeyValue === null) continue;
