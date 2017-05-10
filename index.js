@@ -567,11 +567,11 @@ module.exports = function(Bookshelf) {
     }
   };
 
-  function formatWiths(relations, signleRelationCallback = null) {
+  function formatWiths(relations, signleRelationSubquery = null) {
     // Validate arguments.
     if (isString(relations)) {
       let relObj = {};
-      relObj[relations] = signleRelationCallback;
+      relObj[relations] = signleRelationSubquery;
       relations = [relObj];
     } else if (relations.constructor === Object) {
       relations = [relations];
@@ -603,14 +603,14 @@ module.exports = function(Bookshelf) {
   };
 
   /**
-   * @param {object|string|string[]} relations An object where keys are relation names and values are callback functions or null.
-   * Can also be a single relations name or list of rlation names.
-   * @param {function} [signleRelationCallback] Only takes effect if the "relations" is a single relation name (string).
+   * @param {object|string|string[]} relationNames An object where keys are relation names and values are subquery functions or null.
+   * Can also be a single relations name or an array of relation names.
+   * @param {function} [signleRelationSubquery] Only takes effect if the "relationNames" is a single relation name (string).
    */
-  modelExt.with = function(relations, signleRelationCallback = null) {
+  modelExt.with = function(relationNames, signleRelationSubquery = null) {
     // Validate arguments.
     // withRelated is an object where keys are relation names and values are callback functions or null
-    let withRelated = formatWiths(relations, signleRelationCallback);
+    let withRelated = formatWiths(relationNames, signleRelationSubquery);
 
     // Prepare all relations.
     for (let relationName in withRelated) {
@@ -686,9 +686,9 @@ module.exports = function(Bookshelf) {
   /**
    * @param {string} relationName Name of the relation that you want to eager load.
    * @param {string|string[]} attrs List of attributes on the related model that we want to get from database.
-   * @param {function} [callback] Optional nested query callback.
+   * @param {function} [subquery] Optional nested query callback.
    */
-  modelExt.withSelect = function(relationName, attrs, callback = null) {
+  modelExt.withSelect = function(relationName, attrs, subquery = null) {
     // Validate arguments.
     if (!isString(relationName))
       throw new Error('Must pass a string for the relation name argument.');
@@ -697,11 +697,11 @@ module.exports = function(Bookshelf) {
     if (attrs.constructor !== Array) attrs = [attrs];
 
     // Use the existing "with" function.
-    // Check if the callback is a function.
-    if (isFunction(callback)) {
+    // Check if the subquery is a function.
+    if (isFunction(subquery)) {
       return this.with(relationName, function(q) {
         q.select(attrs);
-        callback(q);
+        subquery(q);
       });
     } else {
       return this.with(relationName, function(q) {
@@ -715,9 +715,11 @@ module.exports = function(Bookshelf) {
   // ---------------------------------------------------------------------------
 
   /**
-   * @param {string|string[]} relationNames List of relations that you want to get the count of.
+   * @param {object|string|string[]} relationNames An object where keys are relation names and values are subquery functions or null.
+   * Can also be a single relations name or an array of relation names.
+   * @param {function} [signleRelationSubquery] If the "relationNames" parameter is a string you can pass the callback to this parameter.
    */
-  modelExt.withCount = function(relationNames) {
+  modelExt.withCount = function(relationNames, signleRelationSubquery = null) {
     // TODO: do the nested count
     // Example: .withCount("roles.permissions")
 
