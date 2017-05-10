@@ -5,9 +5,11 @@
 const extend = require('xtend');
 const memo = require('memoizee');
 
+const _ = require('lodash');
 const isString = require('lodash/isString');
 const isArray = require('lodash/isArray');
 const isFunction = require('lodash/isFunction');
+const isPlainObject = require('lodash/isPlainObject');
 const union = require('lodash/union');
 const at = require('lodash/at');
 
@@ -40,6 +42,36 @@ module.exports = function(Bookshelf) {
         withs: {},
       };
     },
+  };
+
+  // ---------------------------------------------------------------------------
+  // ------ Fake Sync ----------------------------------------------------------
+  // ---------------------------------------------------------------------------
+
+  modelExt.fakeSync = function(options) {
+    options = mergeOptions(this, options || {});
+    let sync = this.sync(options);
+    options.query = sync.query;
+    let columns = null;
+
+    const queryContainsColumns = _(sync.query._statements)
+      .filter({grouping: 'columns'})
+      .some('value.length');
+
+    if (options.columns) {
+      // Normalize single column name into array.
+      columns = _.isArray(options.columns) ?
+        options.columns : [options.columns];
+    } else if (!queryContainsColumns) {
+      // If columns have already been selected via the `query` method
+      // we will use them. Otherwise, select all columns in this table.
+      columns = [_.result(sync.syncing, 'tableName') + '.*'];
+    }
+
+    // Trigger fetching for any possible plugins.
+    sync.syncing.trigger('fetching', sync.syncing, columns, options);
+
+    return sync;
   };
 
   // ---------------------------------------------------------------------------
@@ -587,7 +619,7 @@ module.exports = function(Bookshelf) {
       if (isString(relObj)) {
         // TODO: this probably cannot happen because of argument validation
         withRelated[relObj] = null;
-      } else if (relObj.constructor === Object) {
+      } else if (isPlainObject(relObj)) {
         for (let key in relObj) {
           if (!relObj.hasOwnProperty(key)) continue;
           withRelated[key] = relObj[key];
@@ -614,11 +646,14 @@ module.exports = function(Bookshelf) {
 
     // Prepare all relations.
     for (let relationName in withRelated) {
-      // Check if the relation name is string.
-      if (!isString(relationName))
-        throw new Error('Must pass a string for the relation name.');
+      if (!withRelated.hasOwnProperty(relationName)) continue;
 
-      // Split relation name by . (dots) to handle nested rlations.
+      // Check if the relationName is string.
+      if (!isString(relationName))
+        throw new Error('Must pass an object, string or an array of strings ' +
+          'for the relationNames argument.');
+
+      // Split relation name by . (dots) to handle nested/sub relations.
       let tokens = relationName.split('.');
 
       // Check if we have at least one token.
@@ -715,6 +750,67 @@ module.exports = function(Bookshelf) {
   // ---------------------------------------------------------------------------
 
   /**
+   * Helps to build the withCount subquery.
+   * @param {Bookshelf Model} Model Current model.
+   * @param {Knex query builder} subquery Current subquery. Treated as alias if it is a string.
+   * @param {string} path Remaining relation path.
+   */
+  function withCountSubQuery(Model, subquery, path) {
+    // Split path by . (dots) to handle nested/sub relations.
+    let tokens = path.split('.');
+    // Check if we have at least one token. Sanity check.
+    if (tokens.length < 1)
+      throw new Error('Could not split relation path "' + path + '".');
+    // Pick the first relation name.
+    let firstRelationName = tokens[0];
+    // Check if the relation exists.
+    if (!(firstRelationName in Model))
+      // TODO: make this error find the model name from the bookshelf registry plugin (instead of the tableName)
+      throw new Error('Relation "' + firstRelationName +
+        '" does not exist on the model "' + Model.tableName + '".');
+    // Construct the sub path (remaining path)
+    tokens.shift();
+    let subPath = tokens.join('.');
+
+    // Get the relation data.
+    let relation = Model[firstRelationName]();
+    let relatedData = relation.relatedData;
+
+    // Forge the related/sub model/query.
+    let subModel = relatedData.target.forge();
+    let bookQuery = subModel;
+
+    // Apply the relation constraint.
+    switch (relatedData.type)	{
+      case 'belongsToMany':
+        //loadRelationTasks.push(eagerLoadBelongsToManyRelation.apply(this,
+        //  [ids, collection, withRelationName]));
+        break;
+      case 'hasMany':
+        if (isString(subquery))
+          subquery = knex.raw('(??.??)', [subquery, Model.idAttribute]);
+        else subquery = subquery.select(Model.idAttribute);
+        bookQuery.whereIn(relatedData.foreignKey, subquery);
+        break;
+      case 'belongsTo':
+        if (isString(subquery))
+          subquery = knex.raw('??.??', [subquery, relatedData.foreignKey]);
+        else subquery = subquery.select(relatedData.foreignKey);
+        bookQuery.whereIn(subModel.idAttribute, subquery);
+        break;
+      default:
+        throw new Error('Failed to eager load the "' + firstRelationName +
+          '" relation of the "' + Model.tableName +
+          '" model. Relation type ' + relatedData.type +
+          ' not supported/implemented for the withCount statement.');
+    }
+
+    if (tokens.length <= 1) return bookQuery;
+    else return withCountSubQuery(subModel,
+      bookQuery.fakeSync().query, subPath);
+  }
+
+  /**
    * @param {object|string|string[]} relationNames An object where keys are relation names and values are subquery functions or null.
    * Can also be a single relations name or an array of relation names.
    * @param {function} [signleRelationSubquery] If the "relationNames" parameter is a string you can pass the callback to this parameter.
@@ -723,76 +819,39 @@ module.exports = function(Bookshelf) {
     // TODO: do the nested count
     // Example: .withCount("roles.permissions")
 
-    // We want a list of relations.
-    if (relationNames.constructor !== Array) relationNames = [relationNames];
+    // Validate arguments.
+    // withRelated is an object where keys are relation names and values are callback functions or null
+    let withRelated = formatWiths(relationNames, signleRelationSubquery);
 
     // Loop through all the relation names. Build the select queries.
-    for (let relationName of relationNames)			{
+    for (let relationPath in withRelated) {
+      if (!withRelated.hasOwnProperty(relationPath)) continue;
+
       // Check if the relationName is string.
-      if (!isString(relationName))
-        throw new Error('Must pass a string or an array of strings for ' +
-          'the relationNames argument.');
+      if (!isString(relationPath))
+        throw new Error('Must pass an object, string or an array of strings ' +
+          'for the relationNames argument.');
 
-      // Check if the relation exists on this model.
-      if (!(relationName in this))
-        // TODO: make this error find the model name from the bookshelf registry plugin (instead of the tableName)
-        throw new Error('Relation ' + relationName +
-          ' does not exist on this model (tableName = ' +
-          knex.raw('??', [this.tableName]).toString() + ').');
+      // Build the withCount sub query.
+      let subQuery = withCountSubQuery(this, this.tableName, relationPath);
 
-      // Get the relation data.
-      let relation = this[relationName]();
-      let relatedData = relation.relatedData;
-
-      let idAttribute = this.idAttribute;
-      let tableName = this.tableName;
-      let foreignKey = relatedData.foreignKey;
-      let relationCountName = relationName + 'Count';
-
-      // TODO: belogsTo relation.
-      switch (relatedData.type) {
-        case 'belongsToMany':
-          let joinTableName = relatedData.joinTableName;
-
-          // Compose the nested count query.
-          let fkColumnName = joinTableName + '.' + foreignKey;
-          let nestedCount = knex.select(fkColumnName).from(joinTableName)
-            .groupBy(fkColumnName).count('* as ' + relationCountName)
-            .as(relationCountName);
-
-          // Attach the count to the main query.
-          this.query().leftJoin(nestedCount, tableName + '.' + idAttribute,
-            '=', relationCountName + '.' + foreignKey);
-
-          // Push the column to be selected. (use COALESCE because left join produces null values)
-          this.eloquent.withCountColumns.columns.push(
-            knex.raw('COALESCE(??, ?) as ??',
-              [relationCountName, 0, relationCountName]));
-
-          break;
-        case 'hasMany':
-          let relatedTableName = relatedData.targetTableName;
-
-          // Compose the nested count query.
-          let fkColumnNameHasMany = relatedTableName + '.' + foreignKey;
-          let nestedCountHasMany = knex.select(fkColumnNameHasMany)
-            .from(relatedTableName).groupBy(fkColumnNameHasMany)
-            .count('* as ' + relationCountName).as(relationCountName);
-
-          // Attach the count to the main query.
-          this.query().leftJoin(nestedCountHasMany, tableName + '.' +
-            idAttribute, '=', relationCountName + '.' + foreignKey);
-
-          // Push the column to be selected. (use COALESCE because left join produces null values)
-          this.eloquent.withCountColumns.columns.push(
-            knex.raw('COALESCE(??, ?) as ??',
-              [relationCountName, 0, relationCountName]));
-
-          break;
-        default:
-          throw new Error('Relation type ' + relatedData.type +
-            ' not supported/implemented for the withCount statement.');
+      // Build the alias.
+      let tokens = relationPath.split('.');
+      for (let i = 1; i < tokens.length; i++) {
+        let token = tokens[i];
+        token = token.substr(0, 1).toUpperCase() + token.substr(1);
+        tokens[i] = token;
       }
+      tokens.push('Count');
+
+      // Get the callback.
+      let callback = withRelated[relationPath];
+      // Check if the callback is a function and apply the callback.
+      if (isFunction(callback)) callback(subQuery);
+
+      // Add to select
+      subQuery = subQuery.fakeSync().query.count('*').as(tokens.join(''));
+      this.eloquent.withCountColumns.push(subQuery);
     }
 
     // Chainable.
