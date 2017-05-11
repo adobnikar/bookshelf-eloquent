@@ -37,7 +37,7 @@ module.exports = function(Bookshelf) {
       // Add eloquent settings.
       this.eloquent = {
         fetchOptions: {},
-        withCountColumns: [],
+        withCountColumnsAsync: [],
         relationColumns: [],
         withs: {},
       };
@@ -48,8 +48,8 @@ module.exports = function(Bookshelf) {
   // ------ Fake Sync ----------------------------------------------------------
   // ---------------------------------------------------------------------------
 
-  modelExt.fakeSync = function(options) {
-    options = mergeOptions(this, options || {});
+  modelExt.fakeSync = async function(options) {
+    options = await mergeOptions(this, options || {});
     let sync = this.sync(options);
     options.query = sync.query;
     let columns = null;
@@ -69,9 +69,31 @@ module.exports = function(Bookshelf) {
     }
 
     // Trigger fetching for any possible plugins.
-    sync.syncing.trigger('fetching', sync.syncing, columns, options);
+    await sync.syncing.triggerThen('fetching', sync.syncing, columns, options);
 
     return sync;
+  };
+
+  // ---------------------------------------------------------------------------
+  // ------ Table alias --------------------------------------------------------
+  // ---------------------------------------------------------------------------
+
+  modelExt.useTableAlias = function(alias) {
+    if (this.eloquent.originalTableName == null)
+      this.eloquent.originalTableName = this.tableName;
+    this.tableName = alias;
+
+    let overrideFrom = function(model, attrs, options) {
+      if (!options.isEager || options.parentResponse) {
+        let orgTableName = model.eloquent.originalTableName;
+        let alias = model.tableName;
+        let fromStr = knex.raw(orgTableName + ' as ' + alias).toString();
+        options.query.from(fromStr);
+      }
+    };
+
+    this.on('fetching', overrideFrom.bind(this));
+    this.on('fetching:collection', overrideFrom.bind(this));
   };
 
   // ---------------------------------------------------------------------------
@@ -143,9 +165,13 @@ module.exports = function(Bookshelf) {
    * @param {object} eloquent
    * @param {object} options
    */
-  function mergeOptions(instance, options) {
+  async function mergeOptions(instance, options) {
     let eloquent = instance.eloquent;
-    let withCountColumns = eloquent.withCountColumns;
+    let withCountColumns = [];
+    for (let withCountTask of eloquent.withCountColumnsAsync) {
+      let result = await withCountTask;
+      withCountColumns.push(result.query);
+    }
     let fetchOptions = eloquent.fetchOptions;
 
     if ('columns' in fetchOptions) {
@@ -209,12 +235,12 @@ module.exports = function(Bookshelf) {
   /**
    * Look at the bookshelf documentation.
    */
-  modelExt.fetch = function fetch(options) {
+  modelExt.fetch = async function fetch(options) {
     // Attach options that were built by eloquent/this extension.
-    options = mergeOptions(this, options);
+    options = await mergeOptions(this, options);
 
     // Call the original fetch function with eager load wrapper.
-    return fetchWithEagerLoad.apply(this, [modelFetch, options]);
+    return await fetchWithEagerLoad.apply(this, [modelFetch, options]);
   };
 
   /**
@@ -237,12 +263,12 @@ module.exports = function(Bookshelf) {
   /**
    * Look at the bookshelf documentation.
    */
-  modelExt.fetchAll = function fetchAll(options) {
+  modelExt.fetchAll = async function fetchAll(options) {
     // Attach options that were built by eloquent/this extension.
-    options = mergeOptions(this, options);
+    options = await mergeOptions(this, options);
 
     // Call the original fetchAll function with eager load wrapper.
-    return fetchWithEagerLoad.apply(this, [modelFetchAll, options]);
+    return await fetchWithEagerLoad.apply(this, [modelFetchAll, options]);
   };
 
   // ---------------------------------------------------------------------------
@@ -755,7 +781,7 @@ module.exports = function(Bookshelf) {
    * @param {Knex query builder} subquery Current subquery. Treated as alias if it is a string.
    * @param {string} path Remaining relation path.
    */
-  function withCountSubQuery(Model, subquery, path) {
+  async function withCountSubQuery(Model, subquery, path, baseTableName) {
     // Split path by . (dots) to handle nested/sub relations.
     let tokens = path.split('.');
     // Check if we have at least one token. Sanity check.
@@ -783,8 +809,18 @@ module.exports = function(Bookshelf) {
     // Apply the relation constraint.
     switch (relatedData.type)	{
       case 'belongsToMany':
-        //loadRelationTasks.push(eagerLoadBelongsToManyRelation.apply(this,
-        //  [ids, collection, withRelationName]));
+        // HasMany part.
+        if (isString(subquery))
+          subquery = knex.raw('(??.??)', [subquery, Model.idAttribute]);
+        else subquery = subquery.select(Model.idAttribute);
+
+        // Pivot table part.
+        subquery = knex.select(relatedData.otherKey)
+          .from(relatedData.joinTableName)
+          .whereIn(relatedData.foreignKey, subquery);
+
+        // BelongsTo part.
+        bookQuery.whereIn(subModel.idAttribute, subquery);
         break;
       case 'hasMany':
         if (isString(subquery))
@@ -805,9 +841,14 @@ module.exports = function(Bookshelf) {
           ' not supported/implemented for the withCount statement.');
     }
 
-    if (tokens.length <= 1) return bookQuery;
-    else return withCountSubQuery(subModel,
-      bookQuery.fakeSync().query, subPath);
+    if (bookQuery.tableName === baseTableName)
+      bookQuery.useTableAlias(('t' === baseTableName) ? 't1' : 't');
+
+    if (tokens.length < 1) return bookQuery;
+    else {
+      let syncSubquery = (await bookQuery.fakeSync()).query;
+      return withCountSubQuery(subModel, syncSubquery, subPath, baseTableName);
+    }
   }
 
   /**
@@ -816,9 +857,6 @@ module.exports = function(Bookshelf) {
    * @param {function} [signleRelationSubquery] If the "relationNames" parameter is a string you can pass the callback to this parameter.
    */
   modelExt.withCount = function(relationNames, signleRelationSubquery = null) {
-    // TODO: do the nested count
-    // Example: .withCount("roles.permissions")
-
     // Validate arguments.
     // withRelated is an object where keys are relation names and values are callback functions or null
     let withRelated = formatWiths(relationNames, signleRelationSubquery);
@@ -832,26 +870,37 @@ module.exports = function(Bookshelf) {
         throw new Error('Must pass an object, string or an array of strings ' +
           'for the relationNames argument.');
 
-      // Build the withCount sub query.
-      let subQuery = withCountSubQuery(this, this.tableName, relationPath);
-
-      // Build the alias.
-      let tokens = relationPath.split('.');
-      for (let i = 1; i < tokens.length; i++) {
-        let token = tokens[i];
-        token = token.substr(0, 1).toUpperCase() + token.substr(1);
-        tokens[i] = token;
-      }
-      tokens.push('Count');
-
       // Get the callback.
       let callback = withRelated[relationPath];
-      // Check if the callback is a function and apply the callback.
-      if (isFunction(callback)) callback(subQuery);
 
-      // Add to select
-      subQuery = subQuery.fakeSync().query.count('*').as(tokens.join(''));
-      this.eloquent.withCountColumns.push(subQuery);
+      // Async wrapper.
+      let withCountSubQueryTask = (async(Model, relationPath, callback) => {
+        // Build the withCount sub query.
+        let subQuery = await withCountSubQuery(Model, Model.tableName,
+          relationPath, Model.tableName);
+
+        // Build the alias.
+        let tokens = relationPath.split('.');
+        for (let i = 1; i < tokens.length; i++) {
+          let token = tokens[i];
+          token = token.substr(0, 1).toUpperCase() + token.substr(1);
+          tokens[i] = token;
+        }
+        tokens.push('Count');
+
+        // Check if the callback is a function and apply the callback.
+        if (isFunction(callback)) callback(subQuery);
+
+        // Add to select
+        subQuery = (await subQuery.fakeSync())
+          .query.count('*').as(tokens.join(''));
+
+        // Wrap the result into an object to prevent execution on await.
+        return {query: subQuery};
+      })(this, relationPath, callback);
+
+      // Push the task to the withCount array.
+      this.eloquent.withCountColumnsAsync.push(withCountSubQueryTask);
     }
 
     // Chainable.
