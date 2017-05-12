@@ -9,10 +9,10 @@ module.exports = Bookshelf.model('Friend', {
   hasTimestamps: ['createdAt', 'updatedAt'],
 
   user1: function() {
-    return this.belongsTo('User', 'userId1');
+    return this.belongsTo('User', 'user1Id');
   },
 
   user2: function() {
-    return this.belongsTo('User', 'userId2');
+    return this.belongsTo('User', 'user2Id');
   },
 });

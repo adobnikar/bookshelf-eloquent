@@ -48,10 +48,10 @@ module.exports = Bookshelf.model('User', {
   },
 
   friends1: function() {
-    return this.hasMany('Firend', 'userId1');
+    return this.hasMany('Friend', 'user1Id');
   },
 
   friends2: function() {
-    return this.hasMany('Firend', 'userId2');
+    return this.hasMany('Friend', 'user2Id');
   },
 });

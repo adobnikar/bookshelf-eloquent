@@ -6,6 +6,7 @@ const extend = require('xtend');
 const memo = require('memoizee');
 
 const _ = require('lodash');
+const result = require('lodash/result');
 const isString = require('lodash/isString');
 const isArray = require('lodash/isArray');
 const isFunction = require('lodash/isFunction');
@@ -60,12 +61,12 @@ module.exports = function(Bookshelf) {
 
     if (options.columns) {
       // Normalize single column name into array.
-      columns = _.isArray(options.columns) ?
+      columns = isArray(options.columns) ?
         options.columns : [options.columns];
     } else if (!queryContainsColumns) {
       // If columns have already been selected via the `query` method
       // we will use them. Otherwise, select all columns in this table.
-      columns = [_.result(sync.syncing, 'tableName') + '.*'];
+      columns = [result(sync.syncing, 'tableName') + '.*'];
     }
 
     // Trigger fetching for any possible plugins.
@@ -841,6 +842,7 @@ module.exports = function(Bookshelf) {
           ' not supported/implemented for the withCount statement.');
     }
 
+    // Handle circular relations. Set alias when there is a table name collision.
     if (bookQuery.tableName === baseTableName)
       bookQuery.useTableAlias(('t' === baseTableName) ? 't1' : 't');
 
