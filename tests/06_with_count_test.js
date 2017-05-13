@@ -118,6 +118,12 @@ exports.test = async function() {
     assert.equal(user.postsCount, expected);
   }
 
+  bookUsers = (await User.withCount('posts').get()).toJSON();
+  for (let user of bookUsers) {
+    let expected = knexUserPostsMap.getDef(user.id, 0);
+    assert.equal(user.postsCount, expected);
+  }
+
   // How many posts does each user have with deleted.
   knexUserPostsMap = new Map();
   (await knex.select(['id', 'createdById']).from(posts)
@@ -126,6 +132,16 @@ exports.test = async function() {
   });
 
   bookUsers = (await User.select('id').withCount('posts', (q) => {
+    q.withDeleted();
+    q.whereNotLike('title', '%a');
+  }).get()).toJSON();
+
+  for (let user of bookUsers) {
+    let expected = knexUserPostsMap.getDef(user.id, 0);
+    assert.equal(user.postsCount, expected);
+  }
+
+  bookUsers = (await User.withCount('posts', (q) => {
     q.withDeleted();
     q.whereNotLike('title', '%a');
   }).get()).toJSON();
@@ -150,6 +166,12 @@ exports.test = async function() {
 
   bookUsers = (await (await User.select('id')
     .withCount('friends1.user2')).get()).toJSON();
+  for (let user of bookUsers) {
+    let expected = knexFriendsCount.getDef(user.id, 0);
+    assert.equal(user.friends1User2Count, expected);
+  }
+
+  bookUsers = (await (await User.withCount('friends1.user2')).get()).toJSON();
   for (let user of bookUsers) {
     let expected = knexFriendsCount.getDef(user.id, 0);
     assert.equal(user.friends1User2Count, expected);
@@ -196,6 +218,24 @@ exports.test = async function() {
     assert.equal(user.postsTagsCount, expected);
   }
 
+  bookUsers = (await User.withCount('posts.comments', (q) => {
+    q.whereNotLike('text', 'q%');
+  })
+  .withCount('posts.tags')
+  .withCount('comments', (q) => {
+    q.whereNotLike('text', 'q%');
+  })
+  .get()).toJSON();
+
+  for (let user of bookUsers) {
+    let expected = knexUserPostsCommentsCount.getDef(user.id, new Set()).size;
+    assert.equal(user.postsCommentsCount, expected);
+    expected = knexUserCommentsCount.getDef(user.id, 0);
+    assert.equal(user.commentsCount, expected);
+    expected = knexUserPostTagsCount.getDef(user.id, new Set()).size;
+    assert.equal(user.postsTagsCount, expected);
+  }
+
   // How many tags does a post have.
   let knexPostTagsCount = new Map();
   (await knex.select(['postId', 'tagId']).from('post_has_tags')).map((e) => {
@@ -204,6 +244,12 @@ exports.test = async function() {
 
   let bookPosts = (await Post.select(['id', 'title'])
     .withCount('tags').get()).toJSON();
+  for (let post of bookPosts) {
+    let expected = knexPostTagsCount.getDef(post.id, 0);
+    assert.equal(post.tagsCount, expected);
+  }
+
+  bookPosts = (await Post.withCount('tags').get()).toJSON();
   for (let post of bookPosts) {
     let expected = knexPostTagsCount.getDef(post.id, 0);
     assert.equal(post.tagsCount, expected);
@@ -225,6 +271,13 @@ exports.test = async function() {
 
   let bookComments = (await Comment.select(['id', 'text'])
     .withCount('post.createdBy').get()).toJSON();
+
+  for (let comment of bookComments) {
+    let expected = commentPostUserCount.getDef(comment.id, 0);
+    assert.equal(comment.postCreatedByCount, expected);
+  }
+
+  bookComments = (await Comment.withCount('post.createdBy').get()).toJSON();
 
   for (let comment of bookComments) {
     let expected = commentPostUserCount.getDef(comment.id, 0);

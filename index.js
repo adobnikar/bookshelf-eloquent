@@ -40,6 +40,7 @@ module.exports = function(Bookshelf) {
         fetchOptions: {},
         withCountColumnsAsync: [],
         relationColumns: [],
+        whereHasAsync: [],
         withs: {},
       };
     },
@@ -168,12 +169,17 @@ module.exports = function(Bookshelf) {
    */
   async function mergeOptions(instance, options) {
     let eloquent = instance.eloquent;
+    let fetchOptions = eloquent.fetchOptions;
+
+    // WhereHas tasks.
+    await Promise.all(eloquent.whereHasAsync);
+
+    // WithCount tasks.
     let withCountColumns = [];
     for (let withCountTask of eloquent.withCountColumnsAsync) {
       let result = await withCountTask;
       withCountColumns.push(result.query);
     }
-    let fetchOptions = eloquent.fetchOptions;
 
     if ('columns' in fetchOptions) {
       // Force select relation attributes that are required for the with statement.
@@ -187,17 +193,11 @@ module.exports = function(Bookshelf) {
     // copy any columns from withCountColumns to fetchOptions
     if (withCountColumns.length > 0)	{
       // check if any columns already in the fetchOptions
-      if (!('columns' in fetchOptions)) {
-        // TODO: test if *, ... works. If it works the error can be removed.
-        // TODO: this will need custom attribute removal.
-        // throw new Error('Please define which columns you want to select. This is probably required because you are using the withCount statement.');
-        fetchOptions.columns = ['*'];
-      }
+      if (!('columns' in fetchOptions)) fetchOptions.columns = ['*'];
 
       // copy the columns
-      for (let column of withCountColumns) {
+      for (let column of withCountColumns)
         fetchOptions.columns.push(column);
-      }
     }
 
     options = options || {};
@@ -792,7 +792,6 @@ module.exports = function(Bookshelf) {
     let firstRelationName = tokens[0];
     // Check if the relation exists.
     if (!(firstRelationName in Model))
-      // TODO: make this error find the model name from the bookshelf registry plugin (instead of the tableName)
       throw new Error('Relation "' + firstRelationName +
         '" does not exist on the model "' + Model.tableName + '".');
     // Construct the sub path (remaining path)
@@ -991,75 +990,50 @@ module.exports = function(Bookshelf) {
   /**
    * Where statement on a related model.
    * @param {string} relationName Relation name by which we want to filter.
-   * @param {function} [nestedQueryCallback] This filter can be nested.
+   * @param {function} [subQuery] This filter can be nested.
    * @param {string} [operator] Filter operator.
    * @param {numeric|string} [operand1] Filter operand1.
    * @param {numeric|string} [operand2] Filter operand2.
    */
-  modelExt.whereHas = function(relationName, nestedQueryCallback = null,
+  modelExt.whereHas = function(relationName, subQuery = null,
     operator = null, operand1 = null, operand2 = null) {
-    // validate arguments
-    if (!isString(relationName)) {
-      throw new Error('Must pass a string for the relation argument.');
-    }
+    // Check if the relationName is string.
+    if (!isString(relationName))
+      throw new Error('Must pass a string for the relation name argument.');
 
-    // check if the relation exists
-    if (!(relationName in this)) {
-      // TODO: make this error find the model name from the bookshelf registry plugin (instead of the tableName)
-      throw new Error('Relation ' + relationName +
-        ' does not exist on this model (tableName = ' +
-        knex.raw('??', [this.tableName]).toString() + ').');
-    }
+    // Async wrapper.
+    let whereHasSubQueryTask = (async(Model, relationName, callback,
+      operator = null, operand1 = null, operand2 = null) => {
+      // Build the withCount sub query.
+      let subQuery = await withCountSubQuery(Model, Model.tableName,
+        relationName, Model.tableName);
 
-    // get the relation
-    let relation = this[relationName]();
-    let relatedData = relation.relatedData;
+      // Check if the callback is a function and apply the callback.
+      if (isFunction(callback)) callback(subQuery);
 
-    // TODO: support for other rlations.
-    switch (relatedData.type) {
-      case 'belongsToMany':
-        let idAttribute = this.idAttribute;
-        let tableName = this.tableName;
-        let joinTableName = relatedData.joinTableName;
-        let foreignKey = relatedData.foreignKey;
-        let otherKey = relatedData.otherKey;
+      // Fake sync sub query to trigger any plugins.
+      subQuery = (await subQuery.fakeSync()).query;
 
-        // Forge the related model.
-        let relatedModel = relation.model.forge();
+      if (operator !== null) {
+        // compose the operator string
+        let operatorStr = composeOperator(knex, operator, operand1, operand2);
 
-        let nestedQuery = relatedModel.query()
-          .join(joinTableName, relatedModel.tableName + '.' +
-            relatedModel.idAttribute, '=', joinTableName + '.' + otherKey)
-          .where(joinTableName + '.' + foreignKey, '=',
-            knex.raw('??.??', [tableName, idAttribute]));
+        // count the subquery
+        subQuery.count('*');
 
-        // Check if a nested callback was passed as an argument.
-        if (nestedQueryCallback !== null) {
-          nestedQueryCallback(relatedModel);
-        }
+        // compare the subquery count with the operator
+        Model.query()
+          .whereRaw('(' + subQuery.toString() + ') ' + operatorStr);
+      } else {
+        // Attach the where exists query to this model.
+        Model.query().whereExists(subQuery);
+      }
+    })(this, relationName, subQuery, operator, operand1, operand2);
 
-        if (operator !== null) {
-          // compose the operator string
-          let operatorStr = composeOperator(knex, operator, operand1, operand2);
+    // Push the task to the whereHas array.
+    this.eloquent.whereHasAsync.push(whereHasSubQueryTask);
 
-          // count the subquery
-          nestedQuery.count('*');
-
-          // compare the subquery count with the operator
-          this.query()
-            .whereRaw('(' + nestedQuery.toString() + ') ' + operatorStr);
-        } else {
-          // Attach the where exists query to this model.
-          this.query().whereExists(nestedQuery);
-        }
-
-        break;
-      default:
-        throw new Error('Relation type ' + relatedData.type +
-          ' not supported/implemented for the whereHas statement.');
-    }
-
-    // return the instance of this model
+    // Chainable.
     return this;
   };
 
