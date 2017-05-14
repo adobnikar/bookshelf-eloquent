@@ -10,6 +10,7 @@ Bookshelf is a JavaScript ORM for Node.js, built on the [Knex](http://knexjs.org
 - .**get([options])** → Promise\<Bookshelf Collection\>
 This function is the same as the Bookshelf's [fetchAll](http://bookshelfjs.org/#Model-instance-fetchAll) function. It triggers the execution of a SQL statement that returns all the records that match the query. Examples:
 
+```javascript
     const User = require('../models/user');
 
     // Get all users.
@@ -31,10 +32,12 @@ This function is the same as the Bookshelf's [fetchAll](http://bookshelfjs.org/#
     //    {'id': 3, 'username': 'user3', 'active': true, ... },
     //    ...
     // ]
+```
 
 - .**first([options])** → Promise\<Bookshelf Model\>
 This function is the same as the Bookshelf's [fetch](http://bookshelfjs.org/#Model-instance-fetch) function. It triggers the execution of a SQL statement that returns the first record that matches the query. Examples:
 
+```javascript
     const User = require('../models/user');
 
     // Get first user.
@@ -48,6 +51,7 @@ This function is the same as the Bookshelf's [fetch](http://bookshelfjs.org/#Mod
     console.log(users.toJSON());
     // prints:
     // {'id': 1, 'username': 'user1', 'active': true, ... }
+```
 
 ## Where statements
 
