@@ -67,8 +67,8 @@ bookshelf.plugin(require('bookshelf-eloquent'));
     // {'id': 1, 'username': 'user1', 'active': true, ... }
 ```
 
-- **.select(string|string[])** → Bookshelf  model
---- This function a substitute for the [fetch](http://bookshelfjs.org/#Model-instance-fetch) columns option. This function is chainable. Examples:
+- **.select(string|string[])** → Bookshelf  model (this) / function is chainable
+--- This function a substitute for the [fetch](http://bookshelfjs.org/#Model-instance-fetch) columns option. Examples:
 
 ```javascript
     const User = require('../models/user');
@@ -185,6 +185,51 @@ bookshelf.plugin(require('bookshelf-eloquent'));
 ```
 
 ## With (Eager loading)
+
+- **.with(withRelated, [signleRelationCallback])** → Bookshelf  model (this) / function is chainable
+    - {string|string[]|object} `withRelated` - A relation, or list of relations, to be eager loaded as part of the fetch operation (either one or more relation names or objects mapping relation names to query callbacks),
+    - {function} `[signleRelationCallback]` - Only takes effect if the `withRelated` is a single relation name (string).
+
+- **.withSelect(relationName, columns, [subquery])** → Bookshelf  model (this) / function is chainable
+    - {string} `relationName` - Name of the relation that you want to eager load.
+    - {string|string[]} `columns` - List of columns on the related model that we want to get from database.
+    - {function} `[subquery]` - Optional nested query callback.
+
+**Examples:**
+
+```javascript
+const User = require('../models/user');
+
+// Simple eager loading example.
+var users = await User.with('posts.comments').get();
+
+// WithSelect example.
+var users = await User.withSelect('posts.comments', ['text']).get();
+
+// Nested example.
+var users = await User.withSelect('posts', ['id', 'text'], (q) => {
+    q.whereNotLike('title', 'a%');
+    q.withSelect('comments', 'text');
+}).get();
+
+// Another nested example.
+var comments = await Comment.withSelect('post', ['text', 'createdById'], (q) => {
+    q.whereNotLike('title', 'a%');
+    q.withSelect('createdBy', 'username');
+}).withSelect('createdBy', 'username').get();
+
+// Same as the previous example only with an object as the withRelated parameter.
+var comments = await Comment.with({
+    'post': (q) => {
+        q.select(['text', 'createdById']);
+        q.whereNotLike('title', 'a%');
+        q.withSelect('createdBy', 'username');
+    },
+    'createdBy': (q) => {
+        q.select('username');
+    },
+}).get();
+```
 
 ## WithCount
 
