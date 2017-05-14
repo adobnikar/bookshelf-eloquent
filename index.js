@@ -76,6 +76,33 @@ module.exports = function(Bookshelf) {
     return sync;
   };
 
+  modelExt.buildQuery = async function(options) {
+    options = await mergeOptions(this, options || {});
+    let sync = this.sync(options);
+    options.query = sync.query;
+    let columns = null;
+
+    const queryContainsColumns = _(sync.query._statements)
+      .filter({grouping: 'columns'})
+      .some('value.length');
+
+    if (options.columns) {
+      // Normalize single column name into array.
+      columns = isArray(options.columns) ?
+        options.columns : [options.columns];
+    } else if (!queryContainsColumns) {
+      // If columns have already been selected via the `query` method
+      // we will use them. Otherwise, select all columns in this table.
+      columns = [result(sync.syncing, 'tableName') + '.*'];
+    }
+
+    // Trigger fetching for any possible plugins.
+    await sync.syncing.triggerThen('fetching', sync.syncing, columns, options);
+
+    sync.query.select(columns);
+    return sync;
+  };
+
   // ---------------------------------------------------------------------------
   // ------ Table alias --------------------------------------------------------
   // ---------------------------------------------------------------------------
