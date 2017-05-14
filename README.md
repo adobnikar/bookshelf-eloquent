@@ -5,11 +5,10 @@
 **About Bookshelf**
 Bookshelf is a JavaScript ORM for Node.js, built on the [Knex](http://knexjs.org/) SQL query builder. Featuring both promise based and traditional callback interfaces, providing transaction support, eager/nested-eager relation loading, polymorphic associations, and support for one-to-one, one-to-many, and many-to-many relations. It is designed to work well with PostgreSQL, MySQL, and SQLite3.
 
-## Get and First methods
+## Get, First and Select functions
 
-- .**get([options])** → Promise\<Bookshelf Collection\>
-
-    This function is the same as the Bookshelf's [fetchAll](http://bookshelfjs.org/#Model-instance-fetchAll) function. It triggers the execution of a SQL statement that returns all the records that match the query. Examples:
+- **.get([options])** → Promise\<Bookshelf Collection\>
+--- This function is the same as the Bookshelf's [fetchAll](http://bookshelfjs.org/#Model-instance-fetchAll) function. It triggers the execution of a SQL statement that returns all the records that match the query. **NOTE:** If this function gets called as **.get(string)** then the call will be passed on to the Bookshelf [get](http://bookshelfjs.org/#Model-instance-get) function. Examples:
 
 ```javascript
     const User = require('../models/user');
@@ -35,9 +34,8 @@ Bookshelf is a JavaScript ORM for Node.js, built on the [Knex](http://knexjs.org
     // ]
 ```
 
-- .**first([options])** → Promise\<Bookshelf Model\>
-
-    This function is the same as the Bookshelf's [fetch](http://bookshelfjs.org/#Model-instance-fetch) function. It triggers the execution of a SQL statement that returns the first record that matches the query. Examples:
+- **.first([options])** → Promise\<Bookshelf Model\>
+--- This function is the same as the Bookshelf's [fetch](http://bookshelfjs.org/#Model-instance-fetch) function. It triggers the execution of a SQL statement that returns the first record that matches the query. Examples:
 
 ```javascript
     const User = require('../models/user');
@@ -54,6 +52,36 @@ Bookshelf is a JavaScript ORM for Node.js, built on the [Knex](http://knexjs.org
     // prints:
     // {'id': 1, 'username': 'user1', 'active': true, ... }
 ```
+
+- **.select(string|string[])** → Bookshelf  model
+--- This function a substitute for the [fetch](http://bookshelfjs.org/#Model-instance-fetch) columns option. This function is chainable. Examples:
+
+```javascript
+    const User = require('../models/user');
+
+    // Get usernames of all users.
+    let users = await User.select('username').get();
+    console.log(users.toJSON());
+    // prints:
+    // [
+    //    {'username': 'user1'},
+    //    {'username': 'user2'},
+    //    ...
+    // ]
+
+    // Get 'id', 'username' and 'active' columns of the first active user.
+    let users = await User.select(['id', 'active']).where('active', true).first();
+    console.log(users.toJSON());
+    // prints:
+    // {'id': 1, 'username': 'user1', 'active': true}
+```
+
+## Complete list of function synonyms
+
+- **.get([options])** is Bookshelf's [fetchAll](http://bookshelfjs.org/#Model-instance-fetchAll),
+- **.first([options])** is Bookshelf's [fetch](http://bookshelfjs.org/#Model-instance-fetch),
+- **.delete([options])** is Bookshelf's [destroy](http://bookshelfjs.org/#Model-instance-destroy),
+- **.withDeleted()** is a synonym for **.withTrashed()**
 
 ## Where statements
 
@@ -85,3 +113,69 @@ Bookshelf is a JavaScript ORM for Node.js, built on the [Knex](http://knexjs.org
 - .whereNotLike(column, value) / .orWhereNotLike --- `added with this plugin`
 
 **Examples:**
+
+```javascript
+    const User = require('../models/user');
+    const Account = require('../models/account');
+
+    var users = await User.where({
+      first_name: 'Test',
+      last_name:  'User'
+    }).select('id').get();
+    // SQL: select `id` from `users` where `first_name` = 'Test' and `last_name` = 'User'
+
+    var users = await User.where('id', 1).get();
+    // SQL: select * from `users` where `id` = 1
+
+    var users = await User.where(function() {
+        // knex query
+        this.where('id', 1).orWhere('id', '>', 10);
+    }).orWhere({name: 'Tester'}).get();
+    // SQL: select * from `users` where (`id` = 1 or `id` > 10) or (`name` = 'Tester')
+
+    var users = await User.whereLike('columnName', '%rowlikeme%').get();
+    // SQL: select * from `users` where `columnName` like '%rowlikeme%'
+
+    var users = await User.where('votes', '>', 100).get();
+    // SQL: select * from `users` where `votes` > 100
+
+    var subquery = await User.where('votes', '>', 100).andWhere('status', 'active')
+        .orWhere('name', 'John').select('id').buildQuery();
+    var accounts = await Account.whereIn('id', subquery.query).get();
+    // SQL:
+    //  select * from `accounts` where `id` in (
+    //      select `id` from `users` where `votes` > 100 and `status` = 'active' or `name` = 'John'
+    //  )
+
+    var users = await User.select('name').whereIn('id', [1, 2, 3])
+        .orWhereIn('id', [4, 5, 6]).get();
+    // SQL: select `name` from `users` where `id` in (1, 2, 3) or `id` in (4, 5, 6)
+
+    var users = await User.select('name')
+    .whereIn('account_id', function() {
+        // knex query
+        this.select('id').from('accounts');
+    })
+    // SQL: select `name` from `users` where `account_id` in (select `id` from `accounts`)
+
+    var subquery = await Account.select('id').buildQuery();
+    var users = await User.select('name')
+        .whereIn('account_id', subquery.query).get();
+    // SQL: select `name` from `users` where `account_id` in (select `id` from `accounts`)
+
+    var users = await User.whereNull('updated_at').get();
+    // SQL: select * from `users` where `updated_at` is null
+
+    var users = await User.whereBetween('votes', 1, 100).get();
+    // SQL: select * from `users` where `votes` between 1 and 100
+```
+
+## With (Eager loading)
+
+## WithCount
+
+## WhereHas
+
+## WithDeleted / WithTrashed (bookshelf-paranoia)
+
+## Miscellaneous
