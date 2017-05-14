@@ -162,4 +162,16 @@ exports.test = async function() {
   }).withSelect('createdBy', 'username').get())
     .toJSON().map(removeProto);
   assert.deepStrictEqual(bookResult, knexResult);
+
+  bookResult = (await Comment.with({
+    'post': (q) => {
+      q.select(['text', 'createdById']);
+      q.whereNotLike('title', 'a%');
+      q.withSelect('createdBy', 'username');
+    },
+    'createdBy': (q) => {
+      q.select('username');
+    },
+  }).get()).toJSON().map(removeProto);
+  assert.deepStrictEqual(bookResult, knexResult);
 };

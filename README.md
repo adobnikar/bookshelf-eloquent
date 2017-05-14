@@ -119,12 +119,12 @@ bookshelf.plugin(require('bookshelf-eloquent'));
 - .whereNotExists(builder | callback) / .orWhereNotExists
 - .whereBetween(column, \~mixed\~) / .orWhereBetween
   - .whereBetween(column, range) --- range is an array with [from, to] values
-  - .whereBetween(column, from, to) --- `added with this plugin`
+  - .whereBetween(column, from, to) --- `added with this plugin (not in knex documentation)`
 - .whereNotBetween(column, \~mixed\~) / .orWhereNotBetween
   - .whereNotBetween(column, range) --- range is an array with [from, to] values
-  - .whereNotBetween(column, from, to) --- `added with this plugin`
-- .whereLike(column, value) / .orWhereLike --- `added with this plugin`
-- .whereNotLike(column, value) / .orWhereNotLike --- `added with this plugin`
+  - .whereNotBetween(column, from, to) --- `added with this plugin (not in knex documentation)`
+- .whereLike(column, value) / .orWhereLike --- `added with this plugin (not in knex documentation)`
+- .whereNotLike(column, value) / .orWhereNotLike --- `added with this plugin (not in knex documentation)`
 
 **Examples:**
 
