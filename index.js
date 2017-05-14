@@ -148,6 +148,30 @@ module.exports = function(Bookshelf) {
   };
 
   // ---------------------------------------------------------------------------
+  // ------ Knex AndWhere Methods ----------------------------------------------
+  // ---------------------------------------------------------------------------
+
+  modelExt.andWhere = function(...args) {
+    return this.query('andWhere', ...args);
+  };
+
+  for (let method of whereMethods) {
+    let andMethodName = 'and' + method.substr(0, 1).toUpperCase() +
+      method.substr(1);
+    modelExt[andMethodName] = function(...args) {
+      return this.query(andMethodName, ...args);
+    };
+  }
+
+  modelExt.andWhereLike = function(columnName, value) {
+    return this.andWhere(columnName, 'like', value);
+  };
+
+  modelExt.andWhereNotLike = function(columnName, value) {
+    return this.andWhere(columnName, 'not like', value);
+  };
+
+  // ---------------------------------------------------------------------------
   // ------ Knex OrWhere Methods -----------------------------------------------
   // ---------------------------------------------------------------------------
 
