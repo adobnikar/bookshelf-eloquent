@@ -2,8 +2,22 @@
 
 [Bookshelf.js](http://bookshelfjs.org/) plugin that adds some functionallity from the [eloquent ORM from Laravel](https://laravel.com/docs/master/eloquent). Most notably is improves nested eager loading (`with` function) and adds the `withCount` and `whereHas` functions while supporting existing Bookshelf plugins like the [registry](https://github.com/tgriesser/bookshelf/wiki/Plugin:-Model-Registry), [visibility](https://github.com/tgriesser/bookshelf/wiki/Plugin:-Visibility), [bookshelf-paranoia](https://github.com/estate/bookshelf-paranoia)) and others. All the functions documented here are accessible on both the static Bookshelf models and their instances.
 
-**About Bookshelf**
+**About Bookshelf:**
 Bookshelf is a JavaScript ORM for Node.js, built on the [Knex](http://knexjs.org/) SQL query builder. Featuring both promise based and traditional callback interfaces, providing transaction support, eager/nested-eager relation loading, polymorphic associations, and support for one-to-one, one-to-many, and many-to-many relations. It is designed to work well with PostgreSQL, MySQL, and SQLite3.
+
+## Installation
+
+Run the npm install command:
+`npm i --save bookshelf-eloquent`
+
+After installing bookshelf-eloquent, all you need to do is add it as a bookshelf plugin to enable it on your models.
+```javascript
+let knex = require('knex')(require('./knexfile.js').development);
+let bookshelf = require('bookshelf')(knex);
+
+// Add the plugin
+bookshelf.plugin(require('bookshelf-eloquent'));
+```
 
 ## Get, First and Select functions
 
