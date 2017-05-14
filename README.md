@@ -8,7 +8,9 @@ Bookshelf is a JavaScript ORM for Node.js, built on the [Knex](http://knexjs.org
 ## Installation
 
 Run the npm install command:
-`npm i --save bookshelf-eloquent`
+```bash
+npm i --save bookshelf-eloquent
+```
 
 After installing bookshelf-eloquent, all you need to do is add it as a bookshelf plugin to enable it on your models.
 ```javascript
