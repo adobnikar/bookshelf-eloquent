@@ -280,8 +280,8 @@ module.exports = function(Bookshelf) {
   /**
    * Synonym for destroy.
    */
-  modelExt.delete = function() {
-    return this.destroy();
+  modelExt.delete = function(...args) {
+    return this.destroy(...args);
   };
 
   /**
