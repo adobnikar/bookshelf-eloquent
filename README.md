@@ -188,9 +188,9 @@ bookshelf.plugin(require('bookshelf-eloquent'));
 
 ## With (Eager loading)
 
-- **.with(withRelated, [signleRelationCallback])** → Bookshelf  model (this) / function is chainable
-    - {string|string[]|object} `withRelated` - A relation, or list of relations, to be eager loaded as part of the fetch operation (either one or more relation names or objects mapping relation names to query callbacks),
-    - {function} `[signleRelationCallback]` - Only takes effect if the `withRelated` is a single relation name (string).
+- **.with(withRelated, [signleRelationSubquery])** → Bookshelf  model (this) / function is chainable
+    - {string|string[]|object} `withRelated` - A relation, or list of relations, to be eager loaded as part of the fetch operation (either one or more relation names or objects mapping relation names to subquery callbacks),
+    - {function} `[signleRelationSubquery]` - If the `withRelated` parameter is a single relation (string) you can pass the it's subquery callback to this parameter.
 
 - **.withSelect(relationName, columns, [subquery])** → Bookshelf  model (this) / function is chainable
     - {string} `relationName` - Name of the relation that you want to eager load.
@@ -235,7 +235,94 @@ var comments = await Comment.with({
 
 ## WithCount
 
-## WhereHas
+If you want to count the number of results from a relationship without actually loading them you may use the withCount method, which will place a {camelCaseRelation}Count column on your resulting models.
+
+- **.withCount(withRelated, [signleRelationSubquery])** → Bookshelf  model (this) / function is chainable
+    - {object|string|string[]} `withRelated` An object where keys are relation names and their values are subquery functions (if you don't want to specify a subquery function you can set the value to null instead). Can also be a single relations name (string) or an array of relation names (string[]).
+    - {function} [signleRelationSubquery] If the `withRelated` parameter is a single relation (string) you can pass the it's subquery callback to this parameter.
+
+**Examples:**
+
+```javascript
+const User = require('../models/user');
+
+// A simple withCount example.
+var users = await User.select('id').withCount('posts').get();
+console.log(users.toJSON());
+// prints:
+// [
+//    {'id': 1, 'postsCount': 7},
+//    {'id': 2, 'postsCount': 3},
+//    ...
+// ]
+
+// Example with more relation counts and subqueries.
+var users = await User.withCount('posts.comments', (q) => {
+        q.whereNotLike('text', 'q%');
+    })
+    .withCount('posts.tags')
+    .withCount('comments', (q) => {
+        q.whereNotLike('text', 'q%');
+    }).get();
+console.log(users.toJSON());
+// prints:
+//  [
+//      { id: 1, username: 'admin', postsCommentsCount: 7, postsTagsCount: 5, commentsCount: 1, ... },
+//      { id: 2, username: 'admin.group', postsCommentsCount: 6, postsTagsCount: 9, commentsCount: 3, ... },
+//      ...
+//  ]
+
+// Same as the previous example only with an object as the withRelated parameter.
+var users = await User.withCount({
+    'posts.comments': (q) => {
+        q.whereNotLike('text', 'q%');
+    },
+    'posts.tags': null,
+    'comments': (q) => {
+        q.whereNotLike('text', 'q%');
+    },
+}).get()
+console.log(users.toJSON());
+// prints:
+//  [
+//      { id: 1, username: 'admin', postsCommentsCount: 7, postsTagsCount: 5, commentsCount: 1, ... },
+//      { id: 2, username: 'admin.group', postsCommentsCount: 6, postsTagsCount: 9, commentsCount: 3, ... },
+//      ...
+//  ]
+```
+
+## Has and WhereHas
+
+When accessing the records for a model, you may wish to limit your results based on the existence of a relationship. For example, imagine you want to retrieve all blog posts that have at least one comment. To do so, you may pass the name of the relationship to the `has` method:
+
+- **.has(relationName, [operator], [operand1], [operand2]) / .orHas** → Bookshelf  model (this) / function is chainable
+    - {string} `relationName` Relation name by which we want to filter.
+    - {string} `[operator]` Filter operator.
+    - {numeric|string} `[operand1]` Filter operand1.
+    - {numeric|string} `[operand2]` Filter operand2.
+
+If you need even more power, you may use the `whereHas` and `orWhereHas` methods to put "where" conditions on your `has` queries. These methods allow you to add customized constraints to a relationship constraint, such as checking the content of a comment:
+
+**Examples:**
+
+```javascript
+const User = require('../models/user');
+
+```
+
+- **.whereHas(relationName, [subquery], [operator], [operand1], [operand2]) / .orWhereHas** → Bookshelf  model (this) / function is chainable
+    - {string} `relationName` Relation name by which we want to filter.
+    - {function} `[subquery]` This filter can be nested.
+    - {string} `[operator]` Filter operator.
+    - {numeric|string} `[operand1]` Filter operand1.
+    - {numeric|string} `[operand2]` Filter operand2.
+
+**Examples:**
+
+```javascript
+const User = require('../models/user');
+
+```
 
 ## WithDeleted / WithTrashed (bookshelf-paranoia)
 
