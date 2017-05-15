@@ -24,6 +24,7 @@ module.exports = function(Bookshelf) {
 
   // Extract all methods that will be overridden.
   const modelGet = modelProto.get;
+  const modelHas = modelProto.has;
   const modelFetch = modelProto.fetch;
   const modelFetchAll = modelProto.fetchAll;
   const collectionAdd = collectionProto.add;
@@ -1086,6 +1087,96 @@ module.exports = function(Bookshelf) {
 
     // Chainable.
     return this;
+  };
+
+  /**
+   * OrWhere statement on a related model.
+   * @param {string} relationName Relation name by which we want to filter.
+   * @param {function} [subQuery] This filter can be nested.
+   * @param {string} [operator] Filter operator.
+   * @param {numeric|string} [operand1] Filter operand1.
+   * @param {numeric|string} [operand2] Filter operand2.
+   */
+  modelExt.orWhereHas = function(relationName, subQuery = null,
+    operator = null, operand1 = null, operand2 = null) {
+    // Check if the relationName is string.
+    if (!isString(relationName))
+      throw new Error('Must pass a string for the relation name argument.');
+
+    // Async wrapper.
+    let whereHasSubQueryTask = (async(Model, relationName, callback,
+      operator = null, operand1 = null, operand2 = null) => {
+      // Build the withCount sub query.
+      let subQuery = await withCountSubQuery(Model, Model.tableName,
+        relationName, Model.tableName);
+
+      // Check if the callback is a function and apply the callback.
+      if (isFunction(callback)) callback(subQuery);
+
+      // Fake sync sub query to trigger any plugins.
+      subQuery = (await subQuery.fakeSync()).query;
+
+      if (operator !== null) {
+        // compose the operator string
+        let operatorStr = composeOperator(knex, operator, operand1, operand2);
+
+        // count the subquery
+        subQuery.count('*');
+
+        // compare the subquery count with the operator
+        Model.query()
+          .orWhereRaw('(' + subQuery.toString() + ') ' + operatorStr);
+      } else {
+        // Attach the where exists query to this model.
+        Model.query().orWhereExists(subQuery);
+      }
+    })(this, relationName, subQuery, operator, operand1, operand2);
+
+    // Push the task to the whereHas array.
+    this.eloquent.whereHasAsync.push(whereHasSubQueryTask);
+
+    // Chainable.
+    return this;
+  };
+
+  /**
+   * Where statement on a related model.
+   * @param {string} relationName Relation name by which we want to filter.
+   * @param {string} [operator] Filter operator.
+   * @param {numeric|string} [operand1] Filter operand1.
+   * @param {numeric|string} [operand2] Filter operand2.
+   */
+  modelExt.has = function(relationName, operator = null,
+    operand1 = null, operand2 = null) {
+    if (isString(relationName)) {
+      // Check if the relation exists on this model.
+      // Split relation name by . (dots) to handle nested/sub relations.
+      let tokens = relationName.split('.');
+
+      // Check if we have at least one token.
+      if (tokens.length < 1) throw new Error('Invalid relation name.');
+
+      // Pick the first relation name.
+      let firstRelationName = tokens[0];
+
+      // Check if the relation exists.
+      if (!(firstRelationName in this))
+        return modelHas.apply(this, relationName);
+    }
+
+    return this.whereHas(relationName, null, operator, operand1, operand2);
+  };
+
+  /**
+   * Where statement on a related model.
+   * @param {string} relationName Relation name by which we want to filter.
+   * @param {string} [operator] Filter operator.
+   * @param {numeric|string} [operand1] Filter operand1.
+   * @param {numeric|string} [operand2] Filter operand2.
+   */
+  modelExt.orHas = function(relationName, operator = null,
+    operand1 = null, operand2 = null) {
+    return this.orWhereHas(relationName, null, operator, operand1, operand2);
   };
 
   // ---------------------------------------------------------------------------

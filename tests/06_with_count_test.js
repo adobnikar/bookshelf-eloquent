@@ -236,6 +236,66 @@ exports.test = async function() {
     assert.equal(user.postsTagsCount, expected);
   }
 
+  // Same as the previous example only with an object as the withRelated parameter.
+  knexPostUsersMap = new Map();
+  (await knex.select(['id', 'createdById']).from(posts)
+  .whereNull('deletedAt')).map((e) => {
+    knexPostUsersMap.set(e.id, e.createdById);
+  });
+
+  knexUserPostsCommentsCount = new Map();
+  knexUserCommentsCount = new Map();
+  (await knex.select(['id', 'postId', 'createdById']).from(comments)
+  .whereNull('deletedAt').where('text', 'not like', 'q%')).map((e) => {
+    knexUserCommentsCount.increment(e.createdById);
+    if (knexPostUsersMap.has(e.postId))
+      knexUserPostsCommentsCount.add(knexPostUsersMap.get(e.postId), e.id);
+  });
+
+  knexUserPostTagsCount = new Map();
+  (await knex.select(['postId', 'tagId']).from('post_has_tags')).map((e) => {
+    if (knexPostUsersMap.has(e.postId))
+      knexUserPostTagsCount.add(knexPostUsersMap.get(e.postId), e.tagId);
+  });
+
+  bookUsers = (await User.select(['id', 'username'])
+    .withCount('posts.comments', (q) => {
+      q.whereNotLike('text', 'q%');
+    })
+    .withCount('posts.tags')
+    .withCount('comments', (q) => {
+      q.whereNotLike('text', 'q%');
+    })
+    .get()).toJSON();
+
+  for (let user of bookUsers) {
+    let expected = knexUserPostsCommentsCount.getDef(user.id, new Set()).size;
+    assert.equal(user.postsCommentsCount, expected);
+    expected = knexUserCommentsCount.getDef(user.id, 0);
+    assert.equal(user.commentsCount, expected);
+    expected = knexUserPostTagsCount.getDef(user.id, new Set()).size;
+    assert.equal(user.postsTagsCount, expected);
+  }
+
+  bookUsers = (await User.withCount({
+    'posts.comments': (q) => {
+      q.whereNotLike('text', 'q%');
+    },
+    'posts.tags': null,
+    'comments': (q) => {
+      q.whereNotLike('text', 'q%');
+    },
+  }).get()).toJSON();
+
+  for (let user of bookUsers) {
+    let expected = knexUserPostsCommentsCount.getDef(user.id, new Set()).size;
+    assert.equal(user.postsCommentsCount, expected);
+    expected = knexUserCommentsCount.getDef(user.id, 0);
+    assert.equal(user.commentsCount, expected);
+    expected = knexUserPostTagsCount.getDef(user.id, new Set()).size;
+    assert.equal(user.postsTagsCount, expected);
+  }
+
   // How many tags does a post have.
   let knexPostTagsCount = new Map();
   (await knex.select(['postId', 'tagId']).from('post_has_tags')).map((e) => {
