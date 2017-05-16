@@ -7,6 +7,7 @@ const memo = require('memoizee');
 
 const _ = require('lodash');
 const result = require('lodash/result');
+const pick = require('lodash/pick');
 const isString = require('lodash/isString');
 const isArray = require('lodash/isArray');
 const isFunction = require('lodash/isFunction');
@@ -34,10 +35,10 @@ module.exports = function(Bookshelf) {
     constructor: function() {
       modelProto.constructor.apply(this, arguments);
       const options = arguments[1] || {};
-      this.caseSensitive = (options.caseSensitive === true);
 
       // Add eloquent settings.
       this.eloquent = {
+        caseSensitive: (options.caseSensitive === true),
         fetchOptions: {},
         withCountColumnsAsync: [],
         relationColumns: [],
@@ -1328,18 +1329,7 @@ module.exports = function(Bookshelf) {
   // ------ Extend the Collection ----------------------------------------------
   // ---------------------------------------------------------------------------
 
-  let collectionExt = {};
-
-  // ---------------------------------------------------------------------------
-  // ------ Add ----------------------------------------------------------------
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Similar to the add function but it returns the created model instead of the collection (it is not chainable).
-   * @param {object} attrs Same as the model forge "attributes" parameter.
-   * @param {object} options Same as the model forge options.
-   */
-  collectionExt.add = function(attrs, options) {
+  let collectionEloquentAdd = function(attrs, options) {
     // If attrs is an array then call add for each element.
     if (isArray(attrs)) {
       // Add all models to the collection.
@@ -1358,16 +1348,51 @@ module.exports = function(Bookshelf) {
     }
   };
 
-  const collectionAddMemo = memo(collectionExt.add, {
-    length: 1,
-    normalizer: function(args) {
-      // "args" is arguments object as accessible in memoized function.
-      // NOTE: If the database collation is case insensitive then it is good to use toLowerCase().
-      // TODO: test this if
-      if (this.model.caseSensitive === true) return JSON.stringify(args[0]);
-      else return JSON.stringify(args[0]).toLowerCase();
+  let collectionExt = {
+    constructor: function() {
+      collectionProto.constructor.apply(this, arguments);
+      const options = arguments[1] || {};
+
+      // Add eloquent settings.
+      this.eloquent = {
+        caseSensitive: (options.caseSensitive === true),
+        // memoAdd functions
+        collectionAddMemo: memo(collectionEloquentAdd, {
+          normalizer: function(args) {
+            // "args" is arguments object as accessible in memoized function.
+            // NOTE: If the database collation is case insensitive then it is good to use toLowerCase().
+            let data = args[0];
+            let options = args[1] || {};
+            if (options.unique != null)
+              data = pick(data, options.unique);
+            return JSON.stringify(data).toLowerCase();
+          },
+        }),
+        collectionAddMemoCaseSensitive: memo(collectionEloquentAdd, {
+          normalizer: function(args) {
+            // "args" is arguments object as accessible in memoized function.
+            // NOTE: If the database collation is case insensitive then it is good to use toLowerCase().
+            let data = args[0];
+            let options = args[1] || {};
+            if (options.unique != null)
+              data = pick(data, options.unique);
+            return JSON.stringify(args[0]);
+          },
+        }),
+      };
     },
-  });
+  };
+
+  // ---------------------------------------------------------------------------
+  // ------ Add ----------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Similar to the add function but it returns the created model instead of the collection (it is not chainable).
+   * @param {object} attrs Same as the model forge "attributes" parameter.
+   * @param {object} options Same as the model forge options.
+   */
+  collectionExt.add = collectionEloquentAdd;
 
   /**
    * If we try to add another model with same "attrs" argument
@@ -1379,10 +1404,22 @@ module.exports = function(Bookshelf) {
     // If attrs is an array then call add for each element.
     if (isArray(attrs)) {
       // Add all models to the collection.
-      for (let model of attrs) collectionAddMemo.apply(this, [model, options]);
+      for (let model of attrs) {
+        if (this.eloquent.caseSensitive === true)
+          this.eloquent.collectionAddMemoCaseSensitive
+            .apply(this, [model, options]);
+        else
+          this.eloquent.collectionAddMemo.apply(this, [model, options]);
+      }
       // Return the whole collection.
       return this;
-    } else collectionAddMemo.apply(this, [attrs, options]);
+    } else {
+      if (this.eloquent.caseSensitive === true)
+        this.eloquent.collectionAddMemoCaseSensitive
+          .apply(this, [attrs, options]);
+      else
+        this.eloquent.collectionAddMemo.apply(this, [attrs, options]);
+    }
   };
 
   // ---------------------------------------------------------------------------
@@ -1476,6 +1513,12 @@ module.exports = function(Bookshelf) {
     let idAttribute = this.idAttribute();
     let allColumns = union(uniqKeyAttrs, selectAttrs);
 
+    // Check if allColumns contains a *
+    for (let col of allColumns) {
+      if (col.trim() === '*')
+        allColumns = ['*'];
+    }
+
     // build the knex query
     let knexQuery = knex.select(allColumns).from(this.tableName());
 
@@ -1497,8 +1540,8 @@ module.exports = function(Bookshelf) {
       let uniqPathHash = JSON.stringify(uniqPath);
       // NOTE: if the collation is case insensitive the it is good to use toLowerCase()
       let uniqHash = JSON.stringify(uniqValues);
-      // TODO: test this if
-      if (this.model.caseSensitive !== true) uniqHash = uniqHash.toLowerCase();
+      if (this.eloquent.caseSensitive !== true)
+        uniqHash = uniqHash.toLowerCase();
 
       // add the model to the index
       if (index.has(uniqHash))
@@ -1542,8 +1585,7 @@ module.exports = function(Bookshelf) {
         let uniqValues = at(row, uniqKeyAttrs);
         // NOTE: If the collation is case insensitive the it is good to use toLowerCase().
         let uniqHash = JSON.stringify(uniqValues);
-        // TODO: test this if
-        if (this.model.caseSensitive !== true)
+        if (this.eloquent.caseSensitive !== true)
           uniqHash = uniqHash.toLowerCase();
 
         // check if a model with this hash exists - sanity check
