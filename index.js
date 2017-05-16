@@ -124,6 +124,8 @@ module.exports = function(Bookshelf) {
 
     this.on('fetching', overrideFrom.bind(this));
     this.on('fetching:collection', overrideFrom.bind(this));
+
+    return this;
   };
 
   // ---------------------------------------------------------------------------
