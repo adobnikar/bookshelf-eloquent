@@ -26,13 +26,13 @@ bookshelf.plugin(require('bookshelf-eloquent'));
 - **.get([options])** → Promise\<Bookshelf Collection\>
 --- This function is the same as the Bookshelf's [fetchAll](http://bookshelfjs.org/#Model-instance-fetchAll) function. It triggers the execution of a SQL statement that returns all the records that match the query. **NOTE:** If this function gets called as **.get(string)** then the call will be passed on to the Bookshelf [get](http://bookshelfjs.org/#Model-instance-get) function. Examples:
 
-Require the User model:
+    Require the User model:
 
 ```javascript
     const User = require('../models/user');
 ```
 
-Get all users:
+    Get all users:
 
 ```javascript
     let users = await User.get();
@@ -45,7 +45,7 @@ Get all users:
     // ]
 ```
 
-Get all active users:
+    Get all active users:
 
 ```javascript
     let users = await User.where('active', true).get();
@@ -61,16 +61,24 @@ Get all active users:
 - **.first([options])** → Promise\<Bookshelf Model\>
 --- This function is the same as the Bookshelf's [fetch](http://bookshelfjs.org/#Model-instance-fetch) function. It triggers the execution of a SQL statement that returns the first record that matches the query. Examples:
 
+    Require the User model:
+
 ```javascript
     const User = require('../models/user');
+```
 
-    // Get first user.
+    Get the first user:
+
+```javascript
     let users = await User.get();
     console.log(users.toJSON());
     // prints:
     // {'id': 1, 'username': 'user1', ... }
+```
 
-    // Get first active user.
+    Get first active user:
+
+```javascript
     let users = await User.where('active', true).first();
     console.log(users.toJSON());
     // prints:
