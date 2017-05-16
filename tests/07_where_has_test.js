@@ -116,4 +116,34 @@ exports.test = async function() {
     assert.equal(user.postsCount > 0 && (user.deletedAt !== null),
       usersIndex.has(user.id));
   }
+
+  assert.equal((await User.has('posts').buildQuery()).query.toString(),
+    'select `users`.* from `users` where exists (select * from `posts` where `createdById` in (`users`.`id`) and `posts`.`deletedAt` is null) and `users`.`deletedAt` is null');
+
+  assert.equal((await User.has('posts', '>=', 5).buildQuery()).query.toString(),
+    'select `users`.* from `users` where (select count(*) from `posts` where `createdById` in (`users`.`id`) and `posts`.`deletedAt` is null) >= 5 and `users`.`deletedAt` is null');
+
+  assert.equal((await User.has('posts.comments').buildQuery()).query.toString(),
+    'select `users`.* from `users` where exists (select * from `comments` where `postId` in (select `id` from `posts` where `createdById` in (`users`.`id`) and `posts`.`deletedAt` is null) and `comments`.`deletedAt` is null) and `users`.`deletedAt` is null');
+
+  assert.equal((await User.whereHas('posts', (q) => {
+    q.where('title', 'like', 'foo%');
+  }).buildQuery()).query.toString(),
+    'select `users`.* from `users` where exists (select * from `posts` where `createdById` in (`users`.`id`) and `title` like \'foo%\' and `posts`.`deletedAt` is null) and `users`.`deletedAt` is null');
+
+  assert.equal((await User.whereHas('posts', (q) => {
+    q.where('title', 'like', 'foo%');
+  }, '>=', 5).buildQuery()).query.toString(),
+    'select `users`.* from `users` where (select count(*) from `posts` where `createdById` in (`users`.`id`) and `title` like \'foo%\' and `posts`.`deletedAt` is null) >= 5 and `users`.`deletedAt` is null');
+
+  assert.equal((await User.whereHas('posts.comments', (q) => {
+    q.where('text', 'like', 'bar%');
+  }).buildQuery()).query.toString(),
+    'select `users`.* from `users` where exists (select * from `comments` where `postId` in (select `id` from `posts` where `createdById` in (`users`.`id`) and `posts`.`deletedAt` is null) and `text` like \'bar%\' and `comments`.`deletedAt` is null) and `users`.`deletedAt` is null');
+
+  assert.equal((await User.whereHas('posts', (q) => {
+    q.where('title', 'like', 'foo%');
+    q.has('comments');
+  }).buildQuery()).query.toString(),
+    'select `users`.* from `users` where exists (select * from `posts` where `createdById` in (`users`.`id`) and `title` like \'foo%\' and exists (select * from `comments` where `postId` in (`posts`.`id`) and `comments`.`deletedAt` is null) and `posts`.`deletedAt` is null) and `users`.`deletedAt` is null');
 };

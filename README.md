@@ -308,6 +308,21 @@ If you need even more power, you may use the `whereHas` and `orWhereHas` methods
 ```javascript
 const User = require('../models/user');
 
+// Select all users which have at least one post.
+var users = await User.has('posts').get();
+// SQL: select * from `users` where exists (select * from `posts` where `createdById` in (`users`.`id`))
+
+// Select all users which have at least five posts.
+var users = await User.has('posts', '>=', 5).get();
+// SQL: select * from `users` where (select count(*) from `posts` where `createdById` in (`users`.`id`)) >= 5
+
+// Select all users which have at least one comment on their posts.
+var users = await User.has('posts.comments').get();
+// SQL: select * from `users` where exists (
+//          select * from `comments` where `postId` in (
+//              select `id` from `posts` where `createdById` in (`users`.`id`)
+//          )
+//      )
 ```
 
 - **.whereHas(relationName, [subquery], [operator], [operand1], [operand2]) / .orWhereHas** → Bookshelf  model (this) / function is chainable
@@ -322,6 +337,42 @@ const User = require('../models/user');
 ```javascript
 const User = require('../models/user');
 
+// Select all users which have at least one post where title starts with 'foo'.
+var users = await User.whereHas('posts', (q) => {
+    q.where('title', 'like', 'foo%');
+}).get();
+// SQL: select * from `users` where exists (
+//          select * from `posts` where `createdById` in (`users`.`id`) and `title` like 'foo%'
+//      )
+
+// Select all users which have at least five posts where title starts with 'foo'.
+var users = await User.whereHas('posts', (q) => {
+    q.where('title', 'like', 'foo%');
+}, '>=', 5).get();
+// SQL: select * from `users` where (
+//          select count(*) from `posts` where `createdById` in (`users`.`id`) and `title` like 'foo%'
+//      ) >= 5
+
+// Select all users which have at least one comment on their posts where text starts with 'bar'.
+var users = await User.whereHas('posts.comments', (q) => {
+    q.where('text', 'like', 'bar%');
+}).get();
+// SQL: select * from `users` where exists (
+//          select * from `comments` where `postId` in (
+//              select `id` from `posts` where `createdById` in (`users`.`id`)
+//          ) and `text` like 'bar%'
+//      )
+
+// Select all users which have at least one post where title starts with 'foo' and has at least one comment.
+var users = await User.whereHas('posts', (q) => {
+    q.where('title', 'like', 'foo%');
+    q.has('comments');
+}).get();
+// SQL: select * from `users` where exists (
+//          select * from `posts` where `createdById` in (`users`.`id`) and `title` like 'foo%' and exists (
+//              select * from `comments` where `postId` in (`posts`.`id`)
+//          )
+//      )
 ```
 
 ## WithDeleted / WithTrashed (bookshelf-paranoia)
