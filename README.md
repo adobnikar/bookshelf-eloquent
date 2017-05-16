@@ -26,15 +26,12 @@ bookshelf.plugin(require('bookshelf-eloquent'));
 - **.get([options])** → Promise\<Bookshelf Collection\>
 --- This function is the same as the Bookshelf's [fetchAll](http://bookshelfjs.org/#Model-instance-fetchAll) function. It triggers the execution of a SQL statement that returns all the records that match the query. **NOTE:** If this function gets called as **.get(string)** then the call will be passed on to the Bookshelf [get](http://bookshelfjs.org/#Model-instance-get) function. Examples:
 
-    Require the User model:
-
-```javascript
+    Require the user model.
+    ```javascript
     const User = require('../models/user');
-```
-
-    Get all users:
-
-```javascript
+    ```
+    Get all users.
+    ```javascript
     let users = await User.get();
     console.log(users.toJSON());
     // prints:
@@ -43,11 +40,9 @@ bookshelf.plugin(require('bookshelf-eloquent'));
     //    {'id': 2, 'username': 'user2', ... },
     //    ...
     // ]
-```
-
-    Get all active users:
-
-```javascript
+    ```
+    Get all active users.
+    ```javascript
     let users = await User.where('active', true).get();
     console.log(users.toJSON());
     // prints:
@@ -56,42 +51,39 @@ bookshelf.plugin(require('bookshelf-eloquent'));
     //    {'id': 3, 'username': 'user3', 'active': true, ... },
     //    ...
     // ]
-```
+    ```
 
 - **.first([options])** → Promise\<Bookshelf Model\>
 --- This function is the same as the Bookshelf's [fetch](http://bookshelfjs.org/#Model-instance-fetch) function. It triggers the execution of a SQL statement that returns the first record that matches the query. Examples:
 
-    Require the User model:
-
-```javascript
+    Require the user model.
+    ```javascript
     const User = require('../models/user');
-```
-
-    Get the first user:
-
-```javascript
+    ```
+    Get the first user.
+    ```javascript
     let users = await User.get();
     console.log(users.toJSON());
     // prints:
     // {'id': 1, 'username': 'user1', ... }
-```
-
-    Get first active user:
-
-```javascript
+    ```
+    Get the first active user.
+    ```javascript
     let users = await User.where('active', true).first();
     console.log(users.toJSON());
     // prints:
     // {'id': 1, 'username': 'user1', 'active': true, ... }
-```
+    ```
 
 - **.select(string|string[])** → Bookshelf  model (this) / function is chainable
 --- This function a substitute for the [fetch](http://bookshelfjs.org/#Model-instance-fetch) columns option. Examples:
 
-```javascript
+    Require the user model.
+    ```javascript
     const User = require('../models/user');
-
-    // Get usernames of all users.
+    ```
+    Select usernames of all users.
+    ```javascript
     let users = await User.select('username').get();
     console.log(users.toJSON());
     // prints:
@@ -100,13 +92,14 @@ bookshelf.plugin(require('bookshelf-eloquent'));
     //    {'username': 'user2'},
     //    ...
     // ]
-
-    // Get 'id', 'username' and 'active' columns of the first active user.
+    ```
+    Select 'id', 'username' and 'active' columns of the first active user.
+    ```javascript
     let users = await User.select(['id', 'active']).where('active', true).first();
     console.log(users.toJSON());
     // prints:
     // {'id': 1, 'username': 'user1', 'active': true}
-```
+    ```
 
 ## Complete list of function synonyms
 
@@ -146,60 +139,83 @@ bookshelf.plugin(require('bookshelf-eloquent'));
 
 **Examples:**
 
+Require account and user models.
 ```javascript
-    const User = require('../models/user');
-    const Account = require('../models/account');
-
-    var users = await User.where({
-      first_name: 'Test',
-      last_name:  'User'
-    }).select('id').get();
-    // SQL: select `id` from `users` where `first_name` = 'Test' and `last_name` = 'User'
-
-    var users = await User.where('id', 1).get();
-    // SQL: select * from `users` where `id` = 1
-
-    var users = await User.where(function() {
-        // knex query
-        this.where('id', 1).orWhere('id', '>', 10);
-    }).orWhere({name: 'Tester'}).get();
-    // SQL: select * from `users` where (`id` = 1 or `id` > 10) or (`name` = 'Tester')
-
-    var users = await User.whereLike('columnName', '%rowlikeme%').get();
-    // SQL: select * from `users` where `columnName` like '%rowlikeme%'
-
-    var users = await User.where('votes', '>', 100).get();
-    // SQL: select * from `users` where `votes` > 100
-
-    var subquery = await User.where('votes', '>', 100).andWhere('status', 'active')
-        .orWhere('name', 'John').select('id').buildQuery();
-    var accounts = await Account.whereIn('id', subquery.query).get();
-    // SQL:
-    //  select * from `accounts` where `id` in (
-    //      select `id` from `users` where `votes` > 100 and `status` = 'active' or `name` = 'John'
-    //  )
-
-    var users = await User.select('name').whereIn('id', [1, 2, 3])
-        .orWhereIn('id', [4, 5, 6]).get();
-    // SQL: select `name` from `users` where `id` in (1, 2, 3) or `id` in (4, 5, 6)
-
-    var users = await User.select('name')
-    .whereIn('account_id', function() {
-        // knex query
-        this.select('id').from('accounts');
-    })
-    // SQL: select `name` from `users` where `account_id` in (select `id` from `accounts`)
-
-    var subquery = await Account.select('id').buildQuery();
-    var users = await User.select('name')
-        .whereIn('account_id', subquery.query).get();
-    // SQL: select `name` from `users` where `account_id` in (select `id` from `accounts`)
-
-    var users = await User.whereNull('updated_at').get();
-    // SQL: select * from `users` where `updated_at` is null
-
-    var users = await User.whereBetween('votes', 1, 100).get();
-    // SQL: select * from `users` where `votes` between 1 and 100
+const User = require('../models/user');
+const Account = require('../models/account');
+```
+Get all users where their firstName is 'Test' and their lastName is 'User'.
+```javascript
+var users = await User.where({
+  firstName: 'Test',
+  lastName:  'User'
+}).select('id').get();
+// SQL: select `id` from `users` where `firstName` = 'Test' and `lastName` = 'User'
+```
+Get all users with id 1.
+```javascript
+var users = await User.where('id', 1).get();
+// SQL: select * from `users` where `id` = 1
+```
+Get all users where their id is 1 or is greater than 10 or their name is 'Tester'.
+```javascript
+var users = await User.where(function() {
+    // knex query
+    this.where('id', 1).orWhere('id', '>', 10);
+}).orWhere({name: 'Tester'}).get();
+// SQL: select * from `users` where (`id` = 1 or `id` > 10) or (`name` = 'Tester')
+```
+Get all users where their columnName is like '%rowlikeme%'.
+```javascript
+var users = await User.whereLike('columnName', '%rowlikeme%').get();
+// SQL: select * from `users` where `columnName` like '%rowlikeme%'
+```
+Get all users where their 'votes' column value is greater than 100.
+```javascript
+var users = await User.where('votes', '>', 100).get();
+// SQL: select * from `users` where `votes` > 100
+```
+Get all accounts belonging to users that have more than 100 votes and have active status or have the name 'John'.
+```javascript
+var subquery = await User.where('votes', '>', 100).andWhere('status', 'active')
+    .orWhere('name', 'John').select('id').buildQuery();
+var accounts = await Account.whereIn('userId', subquery.query).get();
+// SQL:
+//  select * from `accounts` where `userId` in (
+//      select `id` from `users` where `votes` > 100 and `status` = 'active' or `name` = 'John'
+//  )
+```
+Select names of all users with id in [1, 2, 3] or in [4, 5, 6].
+```javascript
+var users = await User.select('name').whereIn('id', [1, 2, 3])
+    .orWhereIn('id', [4, 5, 6]).get();
+// SQL: select `name` from `users` where `id` in (1, 2, 3) or `id` in (4, 5, 6)
+```
+Select names of all users belonging to active accounts (with Knex subquery).
+```javascript
+var users = await User.select('name')
+.whereIn('accountId', function() {
+    // knex query
+    this.select('id').from('accounts').where('status', 'active');
+})
+// SQL: select `name` from `users` where `accountId` in (select `id` from `accounts` where `status` = 'active')
+```
+Select names of all users belonging to active accounts (with Bookshelf subquery).
+```javascript
+var subquery = await Account.select('id').where('status', 'active').buildQuery();
+var users = await User.select('name')
+    .whereIn('accountId', subquery.query).get();
+// SQL: select `name` from `users` where `accountId` in (select `id` from `accounts` where `status` = 'active')
+```
+Get all users that were never updated (have the 'updatedAt' timestamp not set).
+```javascript
+var users = await User.whereNull('updatedAt').get();
+// SQL: select * from `users` where `updatedAt` is null
+```
+Get all users where their vote count is between 1 and 100.
+```javascript
+var users = await User.whereBetween('votes', 1, 100).get();
+// SQL: select * from `users` where `votes` between 1 and 100
 ```
 
 ## With (Eager loading)
