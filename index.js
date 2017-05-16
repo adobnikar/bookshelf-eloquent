@@ -1068,7 +1068,7 @@ module.exports = function(Bookshelf) {
 
       if (operator !== null) {
         // compose the operator string
-        let operatorStr = composeOperator(knex, operator, operand1, operand2);
+        let operatorStr = composeOperator(operator, operand1, operand2);
 
         // count the subquery
         subQuery.count('*');
@@ -1118,7 +1118,7 @@ module.exports = function(Bookshelf) {
 
       if (operator !== null) {
         // compose the operator string
-        let operatorStr = composeOperator(knex, operator, operand1, operand2);
+        let operatorStr = composeOperator(operator, operand1, operand2);
 
         // count the subquery
         subQuery.count('*');
