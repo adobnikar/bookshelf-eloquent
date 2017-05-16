@@ -30,28 +30,32 @@ bookshelf.plugin(require('bookshelf-eloquent'));
     ```javascript
     const User = require('../models/user');
     ```
-    Get all users.
-    ```javascript
-    let users = await User.get();
-    console.log(users.toJSON());
-    // prints:
-    // [
-    //    {'id': 1, 'username': 'user1', ... },
-    //    {'id': 2, 'username': 'user2', ... },
-    //    ...
-    // ]
-    ```
-    Get all active users.
-    ```javascript
-    let users = await User.where('active', true).get();
-    console.log(users.toJSON());
-    // prints:
-    // [
-    //    {'id': 1, 'username': 'user1', 'active': true, ... },
-    //    {'id': 3, 'username': 'user3', 'active': true, ... },
-    //    ...
-    // ]
-    ```
+    - Get all users.
+        ```javascript
+        let users = await User.get();
+        console.log(users.toJSON());
+        ```
+        prints:
+        ```
+        [
+            {'id': 1, 'username': 'user1', ... },
+            {'id': 2, 'username': 'user2', ... },
+            ...
+        ]
+        ```
+    - Get all active users.
+        ```javascript
+        let users = await User.where('active', true).get();
+        console.log(users.toJSON());
+        ```
+        prints:
+        ```
+        [
+            {'id': 1, 'username': 'user1', 'active': true, ... },
+            {'id': 3, 'username': 'user3', 'active': true, ... },
+            ...
+        ]
+        ```
 
 - **.first([options])** → Promise\<Bookshelf Model\>
 --- This function is the same as the Bookshelf's [fetch](http://bookshelfjs.org/#Model-instance-fetch) function. It triggers the execution of a SQL statement that returns the first record that matches the query. Examples:
@@ -60,20 +64,24 @@ bookshelf.plugin(require('bookshelf-eloquent'));
     ```javascript
     const User = require('../models/user');
     ```
-    Get the first user.
-    ```javascript
-    let users = await User.get();
-    console.log(users.toJSON());
-    // prints:
-    // {'id': 1, 'username': 'user1', ... }
-    ```
-    Get the first active user.
-    ```javascript
-    let users = await User.where('active', true).first();
-    console.log(users.toJSON());
-    // prints:
-    // {'id': 1, 'username': 'user1', 'active': true, ... }
-    ```
+    - Get the first user.
+        ```javascript
+        let users = await User.get();
+        console.log(users.toJSON());
+        ```
+        prints:
+        ```
+        {'id': 1, 'username': 'user1', ... }
+        ```
+    - Get the first active user.
+        ```javascript
+        let users = await User.where('active', true).first();
+        console.log(users.toJSON());
+        ```
+        prints:
+        ```
+        {'id': 1, 'username': 'user1', 'active': true, ... }
+        ```
 
 - **.select(string|string[])** → Bookshelf  model (this) / function is chainable
 --- This function a substitute for the [fetch](http://bookshelfjs.org/#Model-instance-fetch) columns option. Examples:
@@ -82,24 +90,28 @@ bookshelf.plugin(require('bookshelf-eloquent'));
     ```javascript
     const User = require('../models/user');
     ```
-    Select usernames of all users.
-    ```javascript
-    let users = await User.select('username').get();
-    console.log(users.toJSON());
-    // prints:
-    // [
-    //    {'username': 'user1'},
-    //    {'username': 'user2'},
-    //    ...
-    // ]
-    ```
-    Select 'id', 'username' and 'active' columns of the first active user.
-    ```javascript
-    let users = await User.select(['id', 'active']).where('active', true).first();
-    console.log(users.toJSON());
-    // prints:
-    // {'id': 1, 'username': 'user1', 'active': true}
-    ```
+    - Select usernames of all users.
+        ```javascript
+        let users = await User.select('username').get();
+        console.log(users.toJSON());
+        ```
+        prints:
+        ```
+        [
+            {'username': 'user1'},
+            {'username': 'user2'},
+            ...
+        ]
+        ```
+    - Select 'id', 'username' and 'active' columns of the first active user.
+        ```javascript
+        let users = await User.select(['id', 'active']).where('active', true).first();
+        console.log(users.toJSON());
+        ```
+        prints:
+        ```
+        {'id': 1, 'username': 'user1', 'active': true}
+        ```
 
 ## Complete list of function synonyms
 
@@ -144,79 +156,111 @@ Require account and user models.
 const User = require('../models/user');
 const Account = require('../models/account');
 ```
-Get all users where their firstName is 'Test' and their lastName is 'User'.
-```javascript
-var users = await User.where({
-  firstName: 'Test',
-  lastName:  'User'
-}).select('id').get();
-// SQL: select `id` from `users` where `firstName` = 'Test' and `lastName` = 'User'
-```
-Get all users with id 1.
-```javascript
-var users = await User.where('id', 1).get();
-// SQL: select * from `users` where `id` = 1
-```
-Get all users where their id is 1 or is greater than 10 or their name is 'Tester'.
-```javascript
-var users = await User.where(function() {
-    // knex query
-    this.where('id', 1).orWhere('id', '>', 10);
-}).orWhere({name: 'Tester'}).get();
-// SQL: select * from `users` where (`id` = 1 or `id` > 10) or (`name` = 'Tester')
-```
-Get all users where their columnName is like '%rowlikeme%'.
-```javascript
-var users = await User.whereLike('columnName', '%rowlikeme%').get();
-// SQL: select * from `users` where `columnName` like '%rowlikeme%'
-```
-Get all users where their 'votes' column value is greater than 100.
-```javascript
-var users = await User.where('votes', '>', 100).get();
-// SQL: select * from `users` where `votes` > 100
-```
-Get all accounts belonging to users that have more than 100 votes and have active status or have the name 'John'.
-```javascript
-var subquery = await User.where('votes', '>', 100).andWhere('status', 'active')
-    .orWhere('name', 'John').select('id').buildQuery();
-var accounts = await Account.whereIn('userId', subquery.query).get();
-// SQL:
-//  select * from `accounts` where `userId` in (
-//      select `id` from `users` where `votes` > 100 and `status` = 'active' or `name` = 'John'
-//  )
-```
-Select names of all users with id in [1, 2, 3] or in [4, 5, 6].
-```javascript
-var users = await User.select('name').whereIn('id', [1, 2, 3])
-    .orWhereIn('id', [4, 5, 6]).get();
-// SQL: select `name` from `users` where `id` in (1, 2, 3) or `id` in (4, 5, 6)
-```
-Select names of all users belonging to active accounts (with Knex subquery).
-```javascript
-var users = await User.select('name')
-.whereIn('accountId', function() {
-    // knex query
-    this.select('id').from('accounts').where('status', 'active');
-})
-// SQL: select `name` from `users` where `accountId` in (select `id` from `accounts` where `status` = 'active')
-```
-Select names of all users belonging to active accounts (with Bookshelf subquery).
-```javascript
-var subquery = await Account.select('id').where('status', 'active').buildQuery();
-var users = await User.select('name')
-    .whereIn('accountId', subquery.query).get();
-// SQL: select `name` from `users` where `accountId` in (select `id` from `accounts` where `status` = 'active')
-```
-Get all users that were never updated (have the 'updatedAt' timestamp not set).
-```javascript
-var users = await User.whereNull('updatedAt').get();
-// SQL: select * from `users` where `updatedAt` is null
-```
-Get all users where their vote count is between 1 and 100.
-```javascript
-var users = await User.whereBetween('votes', 1, 100).get();
-// SQL: select * from `users` where `votes` between 1 and 100
-```
+- Get all users where their firstName is 'Test' and their lastName is 'User'.
+    ```javascript
+    var users = await User.where({
+      firstName: 'Test',
+      lastName:  'User'
+    }).select('id').get();
+    ```
+    SQL:
+    ```sql
+    select `id` from `users` where `firstName` = 'Test' and `lastName` = 'User'
+    ```
+- Get all users with id 1.
+    ```javascript
+    var users = await User.where('id', 1).get();
+    ```
+    SQL:
+    ```sql
+    select * from `users` where `id` = 1
+    ```
+- Get all users where their id is 1 or is greater than 10 or their name is 'Tester'.
+    ```javascript
+    var users = await User.where(function() {
+        // knex query
+        this.where('id', 1).orWhere('id', '>', 10);
+    }).orWhere({name: 'Tester'}).get();
+    ```
+    SQL:
+    ```sql
+    select * from `users` where (`id` = 1 or `id` > 10) or (`name` = 'Tester')
+    ```
+- Get all users where their columnName is like '%rowlikeme%'.
+    ```javascript
+    var users = await User.whereLike('columnName', '%rowlikeme%').get();
+    ```
+    SQL:
+    ```sql
+    select * from `users` where `columnName` like '%rowlikeme%'
+    ```
+- Get all users where their 'votes' column value is greater than 100.
+    ```javascript
+    var users = await User.where('votes', '>', 100).get();
+    ```
+    SQL:
+    ```sql
+    select * from `users` where `votes` > 100
+    ```
+- Get all accounts belonging to users that have more than 100 votes and have active status or have the name 'John'.
+    ```javascript
+    var subquery = await User.where('votes', '>', 100).andWhere('status', 'active')
+        .orWhere('name', 'John').select('id').buildQuery();
+    var accounts = await Account.whereIn('userId', subquery.query).get();
+    ```
+    SQL:
+    ```sql
+    select * from `accounts` where `userId` in (
+        select `id` from `users` where `votes` > 100 and `status` = 'active' or `name` = 'John'
+    )
+    ```
+- Select names of all users with id in [1, 2, 3] or in [4, 5, 6].
+    ```javascript
+    var users = await User.select('name').whereIn('id', [1, 2, 3])
+        .orWhereIn('id', [4, 5, 6]).get();
+    ```
+    SQL:
+    ```sql
+    select `name` from `users` where `id` in (1, 2, 3) or `id` in (4, 5, 6)
+    ```
+- Select names of all users belonging to active accounts (with Knex subquery).
+    ```javascript
+    var users = await User.select('name')
+    .whereIn('accountId', function() {
+        // knex query
+        this.select('id').from('accounts').where('status', 'active');
+    })
+    ```
+    SQL:
+    ```sql
+    select `name` from `users` where `accountId` in (select `id` from `accounts` where `status` = 'active')
+    ```
+- Select names of all users belonging to active accounts (with Bookshelf subquery).
+    ```javascript
+    var subquery = await Account.select('id').where('status', 'active').buildQuery();
+    var users = await User.select('name')
+        .whereIn('accountId', subquery.query).get();
+    ```
+    SQL:
+    ```sql
+    select `name` from `users` where `accountId` in (select `id` from `accounts` where `status` = 'active')
+    ```
+- Get all users that were never updated (have the 'updatedAt' timestamp not set).
+    ```javascript
+    var users = await User.whereNull('updatedAt').get();
+    ```
+    SQL:
+    ```sql
+    select * from `users` where `updatedAt` is null
+    ```
+- Get all users where their vote count is between 1 and 100.
+    ```javascript
+    var users = await User.whereBetween('votes', 1, 100).get();
+    ```
+    SQL:
+    ```sql
+    select * from `users` where `votes` between 1 and 100
+    ```
 
 ## With (Eager loading)
 
@@ -231,39 +275,47 @@ var users = await User.whereBetween('votes', 1, 100).get();
 
 **Examples:**
 
+Require the user model.
 ```javascript
 const User = require('../models/user');
-
-// Simple eager loading example.
-var users = await User.with('posts.comments').get();
-
-// WithSelect example.
-var users = await User.withSelect('posts.comments', ['text']).get();
-
-// Nested example.
-var users = await User.withSelect('posts', ['id', 'text'], (q) => {
-    q.whereNotLike('title', 'a%');
-    q.withSelect('comments', 'text');
-}).get();
-
-// Another nested example.
-var comments = await Comment.withSelect('post', ['text', 'createdById'], (q) => {
-    q.whereNotLike('title', 'a%');
-    q.withSelect('createdBy', 'username');
-}).withSelect('createdBy', 'username').get();
-
-// Same as the previous example only with an object as the withRelated parameter.
-var comments = await Comment.with({
-    'post': (q) => {
-        q.select(['text', 'createdById']);
+```
+- Simple eager loading example. Get all users with their posts and comments.
+    ```javascript
+    var users = await User.with('posts.comments').get();
+    ```
+- Get all users with their posts and comments and only select the 'text' column of the comments.
+    ```javascript
+    var users = await User.withSelect('posts.comments', ['text']).get();
+    ```
+- Get all users with their posts and comments where post title doesn't start with 'a'.
+Select only the 'id' and 'text' of posts and 'text' of comments.
+    ```javascript
+    var users = await User.withSelect('posts', ['id', 'text'], (q) => {
+        q.whereNotLike('title', 'a%');
+        q.withSelect('comments', 'text');
+    }).get();
+    ```
+- Get all comments with their posts where the post title doesn't start with 'a'. Load also the creators (users) of posts and comments.
+Select only the 'text' and 'createdById' columns of posts and the usernames of creators.
+    ```javascript
+    var comments = await Comment.withSelect('post', ['text', 'createdById'], (q) => {
         q.whereNotLike('title', 'a%');
         q.withSelect('createdBy', 'username');
-    },
-    'createdBy': (q) => {
-        q.select('username');
-    },
-}).get();
-```
+    }).withSelect('createdBy', 'username').get();
+    ```
+- Same as the previous example only with an object as the withRelated parameter.
+    ```javascript
+    var comments = await Comment.with({
+        'post': (q) => {
+            q.select(['text', 'createdById']);
+            q.whereNotLike('title', 'a%');
+            q.withSelect('createdBy', 'username');
+        },
+        'createdBy': (q) => {
+            q.select('username');
+        },
+    }).get();
+    ```
 
 ## WithCount
 
@@ -275,53 +327,66 @@ If you want to count the number of results from a relationship without actually 
 
 **Examples:**
 
+Require the user model.
 ```javascript
 const User = require('../models/user');
-
-// A simple withCount example.
-var users = await User.select('id').withCount('posts').get();
-console.log(users.toJSON());
-// prints:
-// [
-//    {'id': 1, 'postsCount': 7},
-//    {'id': 2, 'postsCount': 3},
-//    ...
-// ]
-
-// Example with more relation counts and subqueries.
-var users = await User.withCount('posts.comments', (q) => {
-        q.whereNotLike('text', 'q%');
-    })
-    .withCount('posts.tags')
-    .withCount('comments', (q) => {
-        q.whereNotLike('text', 'q%');
-    }).get();
-console.log(users.toJSON());
-// prints:
-//  [
-//      { id: 1, username: 'admin', postsCommentsCount: 7, postsTagsCount: 5, commentsCount: 1, ... },
-//      { id: 2, username: 'admin.group', postsCommentsCount: 6, postsTagsCount: 9, commentsCount: 3, ... },
-//      ...
-//  ]
-
-// Same as the previous example only with an object as the withRelated parameter.
-var users = await User.withCount({
-    'posts.comments': (q) => {
-        q.whereNotLike('text', 'q%');
-    },
-    'posts.tags': null,
-    'comments': (q) => {
-        q.whereNotLike('text', 'q%');
-    },
-}).get()
-console.log(users.toJSON());
-// prints:
-//  [
-//      { id: 1, username: 'admin', postsCommentsCount: 7, postsTagsCount: 5, commentsCount: 1, ... },
-//      { id: 2, username: 'admin.group', postsCommentsCount: 6, postsTagsCount: 9, commentsCount: 3, ... },
-//      ...
-//  ]
 ```
+- Get all users with their post counts. Select only the 'id' and 'postsCount'.
+    ```javascript
+    var users = await User.select('id').withCount('posts').get();
+    console.log(users.toJSON());
+    ```
+    prints:
+    ```
+    [
+        {'id': 1, 'postsCount': 7},
+        {'id': 2, 'postsCount': 3},
+        ...
+    ]
+    ```
+- Get all users with:
+    - the count of comments their recieved on their posts (count only the comments where the text doesn't start with 'q'),
+    - the count of different tags attached to their posts,
+    - the count of comments they have written where the text doesn't start with 'q'.
+    ```javascript
+    var users = await User.withCount('posts.comments', (q) => {
+            q.whereNotLike('text', 'q%');
+        })
+        .withCount('posts.tags')
+        .withCount('comments', (q) => {
+            q.whereNotLike('text', 'q%');
+        }).get();
+    console.log(users.toJSON());
+    ```
+    prints:
+    ```
+    [
+        { id: 1, username: 'admin', postsCommentsCount: 7, postsTagsCount: 5, commentsCount: 1, ... },
+        { id: 2, username: 'admin.group', postsCommentsCount: 6, postsTagsCount: 9, commentsCount: 3, ... },
+        ...
+    ]
+    ```
+- Same as the previous example only with an object as the withRelated parameter.
+    ```javascript
+    var users = await User.withCount({
+        'posts.comments': (q) => {
+            q.whereNotLike('text', 'q%');
+        },
+        'posts.tags': null,
+        'comments': (q) => {
+            q.whereNotLike('text', 'q%');
+        },
+    }).get()
+    console.log(users.toJSON());
+    ```
+    prints:
+    ```
+    [
+        { id: 1, username: 'admin', postsCommentsCount: 7, postsTagsCount: 5, commentsCount: 1, ... },
+        { id: 2, username: 'admin.group', postsCommentsCount: 6, postsTagsCount: 9, commentsCount: 3, ... },
+        ...
+    ]
+    ```
 
 ## Has and WhereHas
 
@@ -337,25 +402,38 @@ If you need even more power, you may use the `whereHas` and `orWhereHas` methods
 
 **Examples:**
 
+Require the user model.
 ```javascript
 const User = require('../models/user');
-
-// Select all users which have at least one post.
-var users = await User.has('posts').get();
-// SQL: select * from `users` where exists (select * from `posts` where `createdById` in (`users`.`id`))
-
-// Select all users which have at least five posts.
-var users = await User.has('posts', '>=', 5).get();
-// SQL: select * from `users` where (select count(*) from `posts` where `createdById` in (`users`.`id`)) >= 5
-
-// Select all users which have at least one comment on their posts.
-var users = await User.has('posts.comments').get();
-// SQL: select * from `users` where exists (
-//          select * from `comments` where `postId` in (
-//              select `id` from `posts` where `createdById` in (`users`.`id`)
-//          )
-//      )
 ```
+- Get all users which have at least one post.
+    ```javascript
+    var users = await User.has('posts').get();
+    ```
+    SQL:
+    ```sql
+    select * from `users` where exists (select * from `posts` where `createdById` in (`users`.`id`))
+    ```
+- Get all users which have at least five posts.
+    ```javascript
+    var users = await User.has('posts', '>=', 5).get();
+    ```
+    SQL:
+    ```sql
+    select * from `users` where (select count(*) from `posts` where `createdById` in (`users`.`id`)) >= 5
+    ```
+- Get all users which have at least one comment on their posts.
+    ```javascript
+    var users = await User.has('posts.comments').get();
+    ```
+    SQL:
+    ```sql
+    select * from `users` where exists (
+        select * from `comments` where `postId` in (
+            select `id` from `posts` where `createdById` in (`users`.`id`)
+        )
+    )
+    ```
 
 - **.whereHas(relationName, [subquery], [operator], [operand1], [operand2]) / .orWhereHas** → Bookshelf  model (this) / function is chainable
     - {string} `relationName` Relation name by which we want to filter.
@@ -366,46 +444,63 @@ var users = await User.has('posts.comments').get();
 
 **Examples:**
 
+Require the user model.
 ```javascript
 const User = require('../models/user');
-
-// Select all users which have at least one post where title starts with 'foo'.
-var users = await User.whereHas('posts', (q) => {
-    q.where('title', 'like', 'foo%');
-}).get();
-// SQL: select * from `users` where exists (
-//          select * from `posts` where `createdById` in (`users`.`id`) and `title` like 'foo%'
-//      )
-
-// Select all users which have at least five posts where title starts with 'foo'.
-var users = await User.whereHas('posts', (q) => {
-    q.where('title', 'like', 'foo%');
-}, '>=', 5).get();
-// SQL: select * from `users` where (
-//          select count(*) from `posts` where `createdById` in (`users`.`id`) and `title` like 'foo%'
-//      ) >= 5
-
-// Select all users which have at least one comment on their posts where text starts with 'bar'.
-var users = await User.whereHas('posts.comments', (q) => {
-    q.where('text', 'like', 'bar%');
-}).get();
-// SQL: select * from `users` where exists (
-//          select * from `comments` where `postId` in (
-//              select `id` from `posts` where `createdById` in (`users`.`id`)
-//          ) and `text` like 'bar%'
-//      )
-
-// Select all users which have at least one post where title starts with 'foo' and has at least one comment.
-var users = await User.whereHas('posts', (q) => {
-    q.where('title', 'like', 'foo%');
-    q.has('comments');
-}).get();
-// SQL: select * from `users` where exists (
-//          select * from `posts` where `createdById` in (`users`.`id`) and `title` like 'foo%' and exists (
-//              select * from `comments` where `postId` in (`posts`.`id`)
-//          )
-//      )
 ```
+- Get all users which have at least one post where title starts with 'foo'.
+    ```javascript
+    var users = await User.whereHas('posts', (q) => {
+        q.where('title', 'like', 'foo%');
+    }).get();
+    ```
+    SQL:
+    ```sql
+    select * from `users` where exists (
+        select * from `posts` where `createdById` in (`users`.`id`) and `title` like 'foo%'
+    );
+    ```
+- Get all users which have at least five posts where title starts with 'foo'.
+    ```javascript
+    var users = await User.whereHas('posts', (q) => {
+        q.where('title', 'like', 'foo%');
+    }, '>=', 5).get();
+    ```
+    SQL:
+    ```sql
+    select * from `users` where (
+        select count(*) from `posts` where `createdById` in (`users`.`id`) and `title` like 'foo%'
+    ) >= 5;
+    ```
+- Get all users which have at least one comment on their posts where text starts with 'bar'.
+    ```javascript
+    var users = await User.whereHas('posts.comments', (q) => {
+        q.where('text', 'like', 'bar%');
+    }).get();
+    ```
+    SQL:
+    ```sql
+    select * from `users` where exists (
+        select * from `comments` where `postId` in (
+            select `id` from `posts` where `createdById` in (`users`.`id`)
+        ) and `text` like 'bar%'
+    );
+    ```
+- Get all users which have at least one post where title starts with 'foo' and has at least one comment.
+    ```javascript
+    var users = await User.whereHas('posts', (q) => {
+        q.where('title', 'like', 'foo%');
+        q.has('comments');
+    }).get();
+    ```
+    SQL:
+    ```sql
+    select * from `users` where exists (
+        select * from `posts` where `createdById` in (`users`.`id`) and `title` like 'foo%' and exists (
+            select * from `comments` where `postId` in (`posts`.`id`)
+        )
+    );
+    ```
 
 ## WithDeleted / WithTrashed (bookshelf-paranoia)
 
