@@ -5,6 +5,12 @@
 **About Bookshelf:**
 Bookshelf is a JavaScript ORM for Node.js, built on the [Knex](http://knexjs.org/) SQL query builder. Featuring both promise based and traditional callback interfaces, providing transaction support, eager/nested-eager relation loading, polymorphic associations, and support for one-to-one, one-to-many, and many-to-many relations. It is designed to work well with PostgreSQL, MySQL, and SQLite3.
 
+## Requirements
+
+- node version
+- bookshelf version
+TODO coorect the first three functions
+
 ## Installation
 
 Run the npm install command:
@@ -20,6 +26,8 @@ let bookshelf = require('bookshelf')(knex);
 // Add the plugin
 bookshelf.plugin(require('bookshelf-eloquent'));
 ```
+
+## List of all functions
 
 ## Get, First and Select functions
 
@@ -391,42 +399,42 @@ When accessing the records for a model, you may wish to limit your results based
     - {numeric|string} `[operand1]` Filter operand1.
     - {numeric|string} `[operand2]` Filter operand2.
 
-If you need even more power, you may use the `whereHas` and `orWhereHas` methods to put "where" conditions on your `has` queries. These methods allow you to add customized constraints to a relationship constraint, such as checking the content of a comment:
+    **Examples:**
 
-**Examples:**
-
-Require the user model.
-```javascript
-const User = require('../models/user');
-```
-- Get all users which have at least one post.
+    Require the user model.
     ```javascript
-    var users = await User.has('posts').get();
+    const User = require('../models/user');
     ```
-    SQL:
-    ```sql
-    select * from `users` where exists (select * from `posts` where `createdById` in (`users`.`id`))
-    ```
-- Get all users which have at least five posts.
-    ```javascript
-    var users = await User.has('posts', '>=', 5).get();
-    ```
-    SQL:
-    ```sql
-    select * from `users` where (select count(*) from `posts` where `createdById` in (`users`.`id`)) >= 5
-    ```
-- Get all users which have at least one comment on their posts.
-    ```javascript
-    var users = await User.has('posts.comments').get();
-    ```
-    SQL:
-    ```sql
-    select * from `users` where exists (
-        select * from `comments` where `postId` in (
-            select `id` from `posts` where `createdById` in (`users`.`id`)
+    - Get all users which have at least one post.
+        ```javascript
+        var users = await User.has('posts').get();
+        ```
+        SQL:
+        ```sql
+        select * from `users` where exists (select * from `posts` where `createdById` in (`users`.`id`))
+        ```
+    - Get all users which have at least five posts.
+        ```javascript
+        var users = await User.has('posts', '>=', 5).get();
+        ```
+        SQL:
+        ```sql
+        select * from `users` where (select count(*) from `posts` where `createdById` in (`users`.`id`)) >= 5
+        ```
+    - Get all users which have at least one comment on their posts.
+        ```javascript
+        var users = await User.has('posts.comments').get();
+        ```
+        SQL:
+        ```sql
+        select * from `users` where exists (
+            select * from `comments` where `postId` in (
+                select `id` from `posts` where `createdById` in (`users`.`id`)
+            )
         )
-    )
-    ```
+        ```
+
+If you need even more power, you may use the `whereHas` and `orWhereHas` methods to put "where" conditions on your `has` queries. These methods allow you to add customized constraints to a relationship constraint, such as checking the content of a comment:
 
 - **.whereHas(relationName, [subquery], [operator], [operand1], [operand2]) / .orWhereHas** → Bookshelf  model (this) / function is chainable
     - {string} `relationName` Relation name by which we want to filter.
@@ -435,65 +443,65 @@ const User = require('../models/user');
     - {numeric|string} `[operand1]` Filter operand1.
     - {numeric|string} `[operand2]` Filter operand2.
 
-**Examples:**
+    **Examples:**
 
-Require the user model.
-```javascript
-const User = require('../models/user');
-```
-- Get all users which have at least one post where title starts with 'foo'.
+    Require the user model.
     ```javascript
-    var users = await User.whereHas('posts', (q) => {
-        q.where('title', 'like', 'foo%');
-    }).get();
+    const User = require('../models/user');
     ```
-    SQL:
-    ```sql
-    select * from `users` where exists (
-        select * from `posts` where `createdById` in (`users`.`id`) and `title` like 'foo%'
-    );
-    ```
-- Get all users which have at least five posts where title starts with 'foo'.
-    ```javascript
-    var users = await User.whereHas('posts', (q) => {
-        q.where('title', 'like', 'foo%');
-    }, '>=', 5).get();
-    ```
-    SQL:
-    ```sql
-    select * from `users` where (
-        select count(*) from `posts` where `createdById` in (`users`.`id`) and `title` like 'foo%'
-    ) >= 5;
-    ```
-- Get all users which have at least one comment on their posts where text starts with 'bar'.
-    ```javascript
-    var users = await User.whereHas('posts.comments', (q) => {
-        q.where('text', 'like', 'bar%');
-    }).get();
-    ```
-    SQL:
-    ```sql
-    select * from `users` where exists (
-        select * from `comments` where `postId` in (
-            select `id` from `posts` where `createdById` in (`users`.`id`)
-        ) and `text` like 'bar%'
-    );
-    ```
-- Get all users which have at least one post where title starts with 'foo' and has at least one comment.
-    ```javascript
-    var users = await User.whereHas('posts', (q) => {
-        q.where('title', 'like', 'foo%');
-        q.has('comments');
-    }).get();
-    ```
-    SQL:
-    ```sql
-    select * from `users` where exists (
-        select * from `posts` where `createdById` in (`users`.`id`) and `title` like 'foo%' and exists (
-            select * from `comments` where `postId` in (`posts`.`id`)
-        )
-    );
-    ```
+    - Get all users which have at least one post where title starts with 'foo'.
+        ```javascript
+        var users = await User.whereHas('posts', (q) => {
+            q.where('title', 'like', 'foo%');
+        }).get();
+        ```
+        SQL:
+        ```sql
+        select * from `users` where exists (
+            select * from `posts` where `createdById` in (`users`.`id`) and `title` like 'foo%'
+        );
+        ```
+    - Get all users which have at least five posts where title starts with 'foo'.
+        ```javascript
+        var users = await User.whereHas('posts', (q) => {
+            q.where('title', 'like', 'foo%');
+        }, '>=', 5).get();
+        ```
+        SQL:
+        ```sql
+        select * from `users` where (
+            select count(*) from `posts` where `createdById` in (`users`.`id`) and `title` like 'foo%'
+        ) >= 5;
+        ```
+    - Get all users which have at least one comment on their posts where text starts with 'bar'.
+        ```javascript
+        var users = await User.whereHas('posts.comments', (q) => {
+            q.where('text', 'like', 'bar%');
+        }).get();
+        ```
+        SQL:
+        ```sql
+        select * from `users` where exists (
+            select * from `comments` where `postId` in (
+                select `id` from `posts` where `createdById` in (`users`.`id`)
+            ) and `text` like 'bar%'
+        );
+        ```
+    - Get all users which have at least one post where title starts with 'foo' and has at least one comment.
+        ```javascript
+        var users = await User.whereHas('posts', (q) => {
+            q.where('title', 'like', 'foo%');
+            q.has('comments');
+        }).get();
+        ```
+        SQL:
+        ```sql
+        select * from `users` where exists (
+            select * from `posts` where `createdById` in (`users`.`id`) and `title` like 'foo%' and exists (
+                select * from `comments` where `postId` in (`posts`.`id`)
+            )
+        );
+        ```
 
 ## WithDeleted / WithTrashed (bookshelf-paranoia)
 
@@ -567,3 +575,200 @@ var user = await User.where('id', 57).first({ withDeleted: true });
     ```
 
 ## Bulk insert
+
+- **.add(data, [options])** → Bookshelf model | Bookshelf collection (this) / function is chainable
+    - {object|object[]} `data` Model data. Function returns a Bookshelf model if
+    If the `data` parameter is an object then the function returns a Bookshelf model.
+    If the `data` parameter is an object[] then the function returns a Bookshelf collection (this) / function is chainable
+    - {object} `[options]` Bookshelf [model forge options](http://bookshelfjs.org/#Model-static-forge).
+
+    This function is overriden Bookshelf [collection add](http://bookshelfjs.org/#Collection-instance-add) function.
+    **NOTE:** this function is not chainable anymore unless you pass an object[] for the `data` parameter.
+
+    **Examples**
+    Add some users to a user collection.
+    ```javascript
+    // Require the user model.
+    const User = require('../models/user');
+
+    // Create a Bookshelf collection.
+    var userCollection = User.collection();
+
+    // Add the users to the collection.
+    var user1 = userCollection.add({name: 'Geovanny Waelchi Jr.', number: 81});
+    var user2 = userCollection.add({name: 'Christ Green', number: 35});
+    var user3 = userCollection.add({name: 'Timmy Windler', number: 2});
+
+    // Add some more users as an array.
+    userCollection.add([
+        {name: 'Francisca Altenwerth DDS', number: 33},
+        {name: 'Lamont Brekke I', number: 55},
+        {name: 'Georgiana Frami', number: 36}
+    ]);
+    ```
+
+- **.insert([ignoreDuplicates = false])** → Promise<Bookshelf collection> (Promise<this>)
+    - {boolean} `ignoreDuplicates` Add 'on duplicate ignore' to the SQL statement.
+    If `ignoreDuplicates` is `false` then all the inserted models will also get their ids automatically attached.
+    If `ignoreDuplicates` is `true` then the automatic retrieval of model ids is not possible (in MySQL). If you need this functionality please use the `insertBy` function instead.
+
+    **Examples**
+
+    Require the user model.
+    ```javascript
+    const User = require('../models/user');
+    ```
+    - Bulk insert 3 users to the database.
+        ```javascript
+        // Create a Bookshelf collection.
+        var userCollection = User.collection();
+
+        // Add the users to the collection.
+        var user1 = userCollection.add({name: 'Geovanny Waelchi Jr.', number: 81});
+        var user2 = userCollection.add({name: 'Christ Green', number: 35});
+        var user3 = userCollection.add({name: 'Timmy Windler', number: 2});
+
+        // Run the bulk insert sql statement.
+        await userCollection.insert();
+
+        // Print the third user.
+        console.log(user3.toJSON());
+        ```
+        prints:
+        ```
+        { name: 'Timmy Windler', number: 2, id: 3 }
+        ```
+
+    - Now we bulk insert 2 users to the database one of wich already has a duplicate name in the database (the number of the duplicate user is also changed from 35 to 89 to show that the user won't be updated but just ingored). In the database the `name` column is set to `unique`.
+        ```javascript
+        // Create a new Bookshelf collection.
+        var userCollection = User.collection();
+
+        // Add the users to the collection.
+        var user1 = userCollection.add({name: 'Christ Green', number: 89}); // This one already has a duplicate name in the database.
+        var user2 = userCollection.add({name: 'Nellie Ortiz', number: 13}); // This one is new.
+
+        // Run the bulk insert sql statement with `ignoreDuplicates` flag set to `true`.
+        await userCollection.insert(true);
+
+        // Print the duplicate user.
+        console.log(user1.toJSON());
+        ```
+        prints:
+        **NOTE:** The model id was not attached because the `ignoreDuplicates` flag was set to `true`.
+        ```
+        { name: 'Christ Green', number: 89 }
+        ```
+        **NOTE:** If we select all users from the database we can see that the duplicate user was not updated.
+        ```javascript
+        var users = await User.select(['id', 'name', 'number']).get();
+        console.log(users.toJSON());
+        ```
+        prints:
+        ```
+        [
+            { id: 145261, name: 'Geovanny Waelchi Jr.', number: 81 },
+            { id: 145262, name: 'Christ Green', number: 35 },
+            { id: 145263, name: 'Timmy Windler', number: 2 },
+            { id: 145264, name: 'Nellie Ortiz', number: 13 }
+        ]
+        ```
+
+- **.addMemo(data, [options])** → Bookshelf model | Bookshelf collection (this) / function is chainable
+    - {object|object[]} `data` Model data. Function returns a Bookshelf model if
+    If the `data` parameter is an object then the function returns a Bookshelf model.
+    If the `data` parameter is an object[] then the function returns a Bookshelf collection (this) / function is chainable
+    - {object} `[options]` Bookshelf [model forge options](http://bookshelfjs.org/#Model-static-forge).
+
+    This function is add function with memoization. The [memoizee](https://github.com/medikoo/memoizee) package is used for this functionality.
+
+    **Examples**
+    **NOTE:** In the database the `name` column is set to `unique`.
+    ```javascript
+    // Require the user model.
+    const User = require('../models/user');
+
+    // Create a Bookshelf collection.
+    var userCollection = User.collection();
+
+    // Add the users to the collection.
+    var user1 = userCollection.addMemo({name: 'Geovanny Waelchi Jr.'});
+    var user2a = userCollection.addMemo({name: 'Christ Green'});
+    var user2b = userCollection.addMemo({name: 'Christ Green'});
+    var user3 = userCollection.addMemo({name: 'Timmy Windler'});
+
+    // Add another user with additional data.
+    // We have to set the 'unique' options setting to our unique key: ['name'].
+    var user4a = userCollection.addMemo({name: 'Francisca Altenwerth DDS', number: 33}, {unique: ['name']});
+    var user4b = userCollection.addMemo({name: 'Francisca Altenwerth DDS', number: 44}, {unique: ['name']});
+
+    // Add some more duplicate users as an array.
+    userCollection.addMemo([
+        {name: 'Francisca Altenwerth DDS', number: 55},
+        {name: 'Christ Green', number: 55},
+        {name: 'Timmy Windler'},
+    ], {unique: ['name']});
+
+    // Print the whole collection.
+    console.log(userCollection.toJSON());
+    ```
+    prints:
+    ```
+    [
+        { name: 'Geovanny Waelchi Jr.' },
+        { name: 'Christ Green' },
+        { name: 'Timmy Windler' },
+        { name: 'Francisca Altenwerth DDS', number: 33 }
+    ]
+    ```
+    When a duplicate user is inserted the first model that was created is returned.
+    ```javascript
+    // Compare user references.
+    console.log(user2a === user2b);
+    console.log(user4a === user4b);
+    ```
+    prints:
+    ```
+    true
+    true
+    ```
+
+.insertBy = function(uniqKeyAttrs = [], returnAttrs = [])
+- **.insertBy(uniqueColumns, [selectColumns])** → Promise<Bookshelf collection> (Promise<this>)
+    - {string|string[]} `uniqueColumns` List of columns in the unique index.
+    - {string|string[]} `[selectColumns]` List of columns that we want to select from the database. Id column will always be selected.
+
+    This function is useful when we want to bulk insert some data to the database but we also expect to encounter some duplicates.
+
+    **Example**
+    **NOTE:** In the database the `name` column is set to `unique`.
+    ```javascript
+    // Require the user model.
+    const User = require('../models/user');
+
+    // Create a Bookshelf collection.
+    var userCollection = User.collection();
+
+    // Add the users to the collection. First we want to fill the database with some pre-existing users.
+    var user1 = userCollection.add({name: 'Geovanny Waelchi Jr.', number: 81});
+    var user2 = userCollection.add({name: 'Christ Green', number: 35});
+
+    // Run the normal bulk insert sql statement.
+    await userCollection.insert();
+
+    var userCollection = User.collection();
+    var user1 = userCollection.add({name: 'Geovanny Waelchi Jr.', number: 5});
+    var user2 = userCollection.add({name: 'Christ Green'});
+    var user3 = userCollection.add({name: 'Timmy Windler', number: 2});
+
+    // Run the insertBy bulk insert sql statement.
+    await userCollection.insertBy(['name'], ['number']);
+
+    // Print all users.
+    console.log(userCollection.toJSON());
+    ```
+    prints:
+    ```
+    true
+    true
+    ```

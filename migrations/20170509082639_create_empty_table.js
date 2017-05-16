@@ -7,7 +7,7 @@ exports.up = async function(knex, Promise) {
 
     table.increments('id').unsigned().primary();
     table.string('name', 64).notNullable().unique();
-    table.integer('number').notNullable();
+    table.integer('number').notNullable().defaultTo(0);
 
     // Timestamps.
     table.dateTime('createdAt').notNullable().defaultTo(knex.fn.now()).index();

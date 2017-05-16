@@ -1338,6 +1338,7 @@ module.exports = function(Bookshelf) {
       return this;
     } else {
       // Forge the new model.
+      // TODO: check if the model needs to be forged??
       let model = this.model.forge(attrs, options);
 
       // Add this model to the collection.
