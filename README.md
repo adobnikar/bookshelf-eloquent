@@ -113,13 +113,6 @@ bookshelf.plugin(require('bookshelf-eloquent'));
         {'id': 1, 'username': 'user1', 'active': true}
         ```
 
-## Complete list of function synonyms
-
-- **.get([options])** is Bookshelf's [fetchAll](http://bookshelfjs.org/#Model-instance-fetchAll),
-- **.first([options])** is Bookshelf's [fetch](http://bookshelfjs.org/#Model-instance-fetch),
-- **.delete([options])** is Bookshelf's [destroy](http://bookshelfjs.org/#Model-instance-destroy),
-- **.withDeleted()** is a synonym for **.withTrashed()**
-
 ## Where statements
 
 [Knex](http://knexjs.org/#Builder-wheres) has a lot of useful where methods that are not directly accessible from the Bookshelf Model. Now all of the Knex where methods are directly attached to the Bookshelf Model. For the detailed documentation you can checkout the [Knex documentation](http://knexjs.org/#Builder-wheres). All the where methods are chainable. The full list of methods:
@@ -142,12 +135,12 @@ bookshelf.plugin(require('bookshelf-eloquent'));
 - .whereNotExists(builder | callback) / .orWhereNotExists
 - .whereBetween(column, \~mixed\~) / .orWhereBetween
   - .whereBetween(column, range) --- range is an array with [from, to] values
-  - .whereBetween(column, from, to) --- `added with this plugin (not in knex documentation)`
+  - .whereBetween(column, from, to) --- `added with this plugin (not in Knex documentation)`
 - .whereNotBetween(column, \~mixed\~) / .orWhereNotBetween
   - .whereNotBetween(column, range) --- range is an array with [from, to] values
-  - .whereNotBetween(column, from, to) --- `added with this plugin (not in knex documentation)`
-- .whereLike(column, value) / .orWhereLike --- `added with this plugin (not in knex documentation)`
-- .whereNotLike(column, value) / .orWhereNotLike --- `added with this plugin (not in knex documentation)`
+  - .whereNotBetween(column, from, to) --- `added with this plugin (not in Knex documentation)`
+- .whereLike(column, value) / .orWhereLike --- `added with this plugin (not in Knex documentation)`
+- .whereNotLike(column, value) / .orWhereNotLike --- `added with this plugin (not in Knex documentation)`
 
 **Examples:**
 
@@ -504,4 +497,73 @@ const User = require('../models/user');
 
 ## WithDeleted / WithTrashed (bookshelf-paranoia)
 
+Support for [bookshelf-paranoia](https://github.com/estate/bookshelf-paranoia) Bookshelf plugin. Bookshelf-eloquent adds the **.withDeleted()** and **.withTrashed()** function which allow you to retrieve soft deleted rows.
+
+Now you can use **.withDeleted()** / **.withTrashed()**
+```javascript
+var user = await User.where('id', 57).withDeleted().first();
+```
+instead of the fetch options:
+```javascript
+var user = await User.where('id', 57).first({ withDeleted: true });
+```
+
+## Complete list of function synonyms
+
+- **.get([options])** is Bookshelf's [fetchAll](http://bookshelfjs.org/#Model-instance-fetchAll),
+- **.first([options])** is Bookshelf's [fetch](http://bookshelfjs.org/#Model-instance-fetch),
+- **.delete([options])** is Bookshelf's [destroy](http://bookshelfjs.org/#Model-instance-destroy),
+- **.withDeleted()** is a synonym for **.withTrashed()**
+
 ## Miscellaneous
+
+- **.fakeSync([options])** → Promise<[Bookshelf  Sync](https://github.com/tgriesser/bookshelf/blob/master/src/sync.js)>
+    - {object} `[options]` Bookshelf [fetch options](http://bookshelfjs.org/#Model-instance-fetch).
+
+    Triggers plugins (like [bookshelf-paranoia](https://github.com/estate/bookshelf-paranoia)) that listen to the Bookshelf fetch events by triggering the `fetching` event. Function returns a Promise<[Bookshelf  Sync](https://github.com/tgriesser/bookshelf/blob/master/src/sync.js)>.
+
+    **Example**
+    ```javascript
+    const User = require('../models/user');
+    var sync = await User.where('id', 57).fakeSync();
+    var knexBuilder = sync.query;
+    console.log(knexBuilder.toString());
+    ```
+    prints:
+    ```sql
+    select * from `users` where `id` = 57
+    ```
+
+- **.buildQuery([options])** → Promise<[Bookshelf  Sync](https://github.com/tgriesser/bookshelf/blob/master/src/sync.js)>
+    - {object} `[options]` Bookshelf [fetch options](http://bookshelfjs.org/#Model-instance-fetch).
+
+    Should be used for subquery building. Similar to the `fakeSync` function. Triggers plugins (like [bookshelf-paranoia](https://github.com/estate/bookshelf-paranoia)) that listen to the Bookshelf fetch events by triggering the `fetching` event. Also selects the Bookshelf [fetch options](http://bookshelfjs.org/#Model-instance-fetch) columns. Function returns a Promise<[Bookshelf  Sync](https://github.com/tgriesser/bookshelf/blob/master/src/sync.js)>.
+
+    **Example**
+    ```javascript
+    const User = require('../models/user');
+    var sync = await User.where('id', 57).buildQuery({columns: ['id', 'username']});
+    var knexBuilder = sync.query;
+    console.log(knexBuilder.toString());
+    ```
+    prints:
+    ```sql
+    select `id`, `username` from `users` where `id` = 57
+    ```
+
+- **.useTableAlias(alias)** → Bookshelf  model (this) / function is chainable
+    - {string} `alias` Table alias name.
+
+    **Example**
+    ```javascript
+    const User = require('../models/user');
+    var sync = await User.where('id', 57).useTableAlias('t').buildQuery();
+    var knexBuilder = sync.query;
+    console.log(knexBuilder.toString());
+    ```
+    prints:
+    ```sql
+    select `t`.* from `users` as `t` where `id` = 57
+    ```
+
+## Bulk insert

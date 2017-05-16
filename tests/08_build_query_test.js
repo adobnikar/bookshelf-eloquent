@@ -42,6 +42,21 @@ exports.test = async function() {
   assert.equal(comments.query.toString(), 'select `name` from `comments` ' +
     'where `postId` in (select `id` from `posts` where `posts`.`deletedAt` ' +
     'is null) and `comments`.`deletedAt` is null');
+
+  let sync = await User.where('id', 57).fakeSync();
+  let knexBuilder = sync.query;
+  assert.equal(knexBuilder.toString(),
+    'select * from `users` where `id` = 57 and `users`.`deletedAt` is null');
+
+  sync = await User.where('id', 57).buildQuery({columns: ['id', 'username']});
+  knexBuilder = sync.query;
+  assert.equal(knexBuilder.toString(),
+    'select `id`, `username` from `users` where `id` = 57 and ' +
+    '`users`.`deletedAt` is null');
+
+  sync = await User.where('id', 57).useTableAlias('t').buildQuery();
+  knexBuilder = sync.query;
+  assert.equal(knexBuilder.toString(), 'select `t`.* from `users` as `t` where `id` = 57 and `t`.`deletedAt` is null');
 };
 
 
