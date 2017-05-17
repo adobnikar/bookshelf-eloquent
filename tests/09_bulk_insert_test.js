@@ -168,21 +168,18 @@ exports.test = async function() {
   // Run the insertBy bulk insert sql statement.
   await userCollection.insertBy(['name'], ['number']);
 
-  // Print all users.
-  console.log(userCollection.toJSON());
-
-  /*data = [
+  data2 = [
     {name: 'Geovanny Waelchi Jr.', number: 81},
     {name: 'Christ Green', number: 35},
     {name: 'Timmy Windler', number: 2},
-    {name: 'Dr. Janie Mayert', number: 81},
-    {name: 'Francisca Altenwerth DDS', number: 33},
-    {name: 'Lamont Brekke I', number: 55},
-    {name: 'Georgiana Frami', number: 36},
-    {name: 'Nellie Ortiz', number: 90},
-    {name: 'Russ Volkman', number: 52},
-    {name: 'Arnulfo Moore', number: 77},
-  ];*/
+  ];
+  data3 = userCollection.toJSON();
+
+  for (let i = 0; i < data2.length; i++) {
+    assert(data3[i].id != null);
+    assert.equal(data3[i].name, data2[i].name);
+    assert.equal(data3[i].number, data2[i].number);
+  }
 };
 
 exports.tearDown = async function() {

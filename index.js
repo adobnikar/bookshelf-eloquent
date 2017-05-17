@@ -1337,9 +1337,11 @@ module.exports = function(Bookshelf) {
       // Return the whole collection.
       return this;
     } else {
-      // Forge the new model.
-      // TODO: check if the model needs to be forged??
-      let model = this.model.forge(attrs, options);
+      // Check if the model needs to be forged.
+      let model = attrs;
+      if (!modelProto.isPrototypeOf(model))
+        // Forge the new model.
+        model = this.model.forge(model, options);
 
       // Add this model to the collection.
       collectionAdd.apply(this, [model]);
