@@ -7,9 +7,8 @@ Bookshelf is a JavaScript ORM for Node.js, built on the [Knex](http://knexjs.org
 
 ## Requirements
 
-- node version
-- bookshelf version
-TODO coorect the first three functions
+- requires **node v7.6.0** or higher for ES2015 and async function support,
+- all the documented functions have been tested on **Bookshelf 0.10.3**.
 
 ## Installation
 
@@ -29,10 +28,33 @@ bookshelf.plugin(require('bookshelf-eloquent'));
 
 ## List of all functions
 
+- **.get([options])** → Promise\<Bookshelf Collection\>,
+- **.first([options])** → Promise\<Bookshelf Model\>,
+- **.select(columns)** → Bookshelf  model (this) / function is chainable,
+- Knex where statements (see the **Where statements** section),
+- **.with(withRelated, [signleRelationSubquery])** → Bookshelf  model (this) / function is chainable
+- **.withSelect(relationName, columns, [subquery])** → Bookshelf  model (this) / function is chainable
+- **.withCount(withRelated, [signleRelationSubquery])** → Bookshelf  model (this) / function is chainable
+- **.has(relationName, [operator], [operand1], [operand2]) / .orHas** → Bookshelf  model (this) / function is chainable
+- **.whereHas(relationName, [subquery], [operator], [operand1], [operand2]) / .orWhereHas** → Bookshelf  model (this) / function is chainable
+- **.withDeleted() / .withTrashed** → Bookshelf model (this) / function is chainable
+- **.fakeSync([options])** → Promise\<[Bookshelf  Sync](https://github.com/tgriesser/bookshelf/blob/master/src/sync.js)\>
+- **.buildQuery([options])** → Promise\<[Bookshelf  Sync](https://github.com/tgriesser/bookshelf/blob/master/src/sync.js)\>
+- **.useTableAlias(alias)** → Bookshelf  model (this) / function is chainable
+- **.add(data, [options])** → Bookshelf model | Bookshelf collection (this) / function is chainable
+- **.addMemo(data, [options])** → Bookshelf model | Bookshelf collection (this) / function is chainable
+- **.insert([ignoreDuplicates = false])** → Promise\<Bookshelf collection\> (Promise\<this\>)
+- **.insertBy(uniqueColumns, [selectColumns])** → Promise\<Bookshelf collection\> (Promise\<this\>)
+
 ## Get, First and Select functions
 
 - **.get([options])** → Promise\<Bookshelf Collection\>
---- This function is the same as the Bookshelf's [fetchAll](http://bookshelfjs.org/#Model-instance-fetchAll) function. It triggers the execution of a SQL statement that returns all the records that match the query. **NOTE:** If this function gets called as **.get(string)** then the call will be passed on to the Bookshelf [get](http://bookshelfjs.org/#Model-instance-get) function. Examples:
+    - {object} `[options]` Bookshelf [fetchAll options](http://bookshelfjs.org/#Model-instance-fetchAll).
+
+    This function is the same as the Bookshelf's [fetchAll](http://bookshelfjs.org/#Model-instance-fetchAll) function. It triggers the execution of a SQL statement that returns all the records that match the query.
+    **NOTE:** If this function gets called as **.get(string)** then the call will be passed on to the Bookshelf [get](http://bookshelfjs.org/#Model-instance-get) function.
+
+    **Examples:**
 
     Require the user model.
     ```javascript
@@ -66,7 +88,11 @@ bookshelf.plugin(require('bookshelf-eloquent'));
         ```
 
 - **.first([options])** → Promise\<Bookshelf Model\>
---- This function is the same as the Bookshelf's [fetch](http://bookshelfjs.org/#Model-instance-fetch) function. It triggers the execution of a SQL statement that returns the first record that matches the query. Examples:
+    - {object} `[options]` Bookshelf [fetch options](http://bookshelfjs.org/#Model-instance-fetch).
+
+    This function is the same as the Bookshelf's [fetch](http://bookshelfjs.org/#Model-instance-fetch) function. It triggers the execution of a SQL statement that returns the first record that matches the query.
+
+    **Examples:**
 
     Require the user model.
     ```javascript
@@ -91,8 +117,12 @@ bookshelf.plugin(require('bookshelf-eloquent'));
         {'id': 1, 'username': 'user1', 'active': true, ... }
         ```
 
-- **.select(string|string[])** → Bookshelf  model (this) / function is chainable
---- This function a substitute for the [fetch](http://bookshelfjs.org/#Model-instance-fetch) columns option. Examples:
+- **.select(columns)** → Bookshelf  model (this) / function is chainable
+    - {string|string[]} `columns` List of columns that we want to select from the database.
+
+    This function a substitute for the [fetch](http://bookshelfjs.org/#Model-instance-fetch) columns option.
+
+    **Examples:**
 
     Require the user model.
     ```javascript
@@ -505,16 +535,20 @@ If you need even more power, you may use the `whereHas` and `orWhereHas` methods
 
 ## WithDeleted / WithTrashed (bookshelf-paranoia)
 
-Support for [bookshelf-paranoia](https://github.com/estate/bookshelf-paranoia) Bookshelf plugin. Bookshelf-eloquent adds the **.withDeleted()** and **.withTrashed()** function which allow you to retrieve soft deleted rows.
+- **.withDeleted() / .withTrashed** → Bookshelf model (this) / function is chainable
 
-Now you can use **.withDeleted()** / **.withTrashed()**
-```javascript
-var user = await User.where('id', 57).withDeleted().first();
-```
-instead of the fetch options:
-```javascript
-var user = await User.where('id', 57).first({ withDeleted: true });
-```
+    Support for [bookshelf-paranoia](https://github.com/estate/bookshelf-paranoia) Bookshelf plugin. Bookshelf-eloquent adds the **.withDeleted()** and **.withTrashed()** function which allow you to retrieve soft deleted rows.
+
+    **Example:**
+
+    Now you can use **.withDeleted()** / **.withTrashed()**
+    ```javascript
+    var user = await User.where('id', 57).withDeleted().first();
+    ```
+    instead of the fetch options (old way):
+    ```javascript
+    var user = await User.where('id', 57).first({ withDeleted: true });
+    ```
 
 ## Complete list of function synonyms
 
