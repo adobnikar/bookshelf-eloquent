@@ -57,6 +57,7 @@ bookshelf.plugin(require('bookshelf-eloquent'));
     - {object} `[options]` Bookshelf [fetchAll options](http://bookshelfjs.org/#Model-instance-fetchAll).
 
     This function is the same as the Bookshelf's [fetchAll](http://bookshelfjs.org/#Model-instance-fetchAll) function. It triggers the execution of a SQL statement that returns all the records that match the query.
+
     **NOTE:** If this function gets called as **.get(string)** then the call will be passed on to the Bookshelf [get](http://bookshelfjs.org/#Model-instance-get) function.
 
     **Examples:**
@@ -622,9 +623,11 @@ If you need even more power, you may use the `whereHas` and `orWhereHas` methods
     - {object} `[options]` Bookshelf [model forge options](http://bookshelfjs.org/#Model-static-forge).
 
     This function is overriden Bookshelf [collection add](http://bookshelfjs.org/#Collection-instance-add) function.
+
     **NOTE:** this function is not chainable anymore unless you pass an object[] for the `data` parameter.
 
     **Examples**
+
     Add some users to a user collection.
     ```javascript
     // Require the user model.
@@ -694,6 +697,7 @@ If you need even more power, you may use the `whereHas` and `orWhereHas` methods
         console.log(user1.toJSON());
         ```
         prints:
+
         **NOTE:** The model id was not attached because the `ignoreDuplicates` flag was set to `true`.
         ```
         { name: 'Christ Green', number: 89 }
@@ -722,7 +726,9 @@ If you need even more power, you may use the `whereHas` and `orWhereHas` methods
     This function is add function with memoization. The [memoizee](https://github.com/medikoo/memoizee) package is used for this functionality.
 
     **Examples**
+
     **NOTE:** In the database the `name` column is set to `unique`.
+
     ```javascript
     // Require the user model.
     const User = require('../models/user');
@@ -779,7 +785,9 @@ If you need even more power, you may use the `whereHas` and `orWhereHas` methods
     This function is useful when we want to bulk insert some data to the database but we also expect to encounter some duplicates.
 
     **Example**
+
     **NOTE:** In the database the `name` column is set to `unique`.
+
     ```javascript
     // Require the user model.
     const User = require('../models/user');
