@@ -1,6 +1,6 @@
 # bookshelf-eloquent
 
-This is a plugin for [Bookshelf.js](http://bookshelfjs.org/) that adds some functionallity from the Laravel's [eloquent ORM](https://laravel.com/docs/master/eloquent). Most notably it improves nested eager loading (`with` function) and adds the `withCount` and `whereHas` functions while supporting existing Bookshelf plugins like [registry](https://github.com/tgriesser/bookshelf/wiki/Plugin:-Model-Registry), [visibility](https://github.com/tgriesser/bookshelf/wiki/Plugin:-Visibility), [bookshelf-paranoia](https://github.com/estate/bookshelf-paranoia)) and others. All the functions documented here are accessible on both the static Bookshelf models and their instances.
+This is a plugin for [Bookshelf.js](http://bookshelfjs.org/) that adds some functionality from the Laravel's [eloquent ORM](https://laravel.com/docs/master/eloquent). Most notably it improves nested eager loading (`with` function) and adds the `withCount` and `whereHas` functions while supporting existing Bookshelf plugins like [registry](https://github.com/tgriesser/bookshelf/wiki/Plugin:-Model-Registry), [visibility](https://github.com/tgriesser/bookshelf/wiki/Plugin:-Visibility), [bookshelf-paranoia](https://github.com/estate/bookshelf-paranoia)) and others. All the functions documented here are accessible on both the static Bookshelf models and their instances.
 
 **About Bookshelf:**
 Bookshelf is a JavaScript ORM for Node.js, built on the [Knex](http://knexjs.org/) SQL query builder. Featuring both promise based and traditional callback interfaces, providing transaction support, eager/nested-eager relation loading, polymorphic associations, and support for one-to-one, one-to-many, and many-to-many relations. It is designed to work well with PostgreSQL, MySQL, and SQLite3.
@@ -681,7 +681,7 @@ If you need even more power, you may use the `whereHas` and `orWhereHas` methods
         { name: 'Timmy Windler', number: 2, id: 3 }
         ```
 
-    - Now we bulk insert 2 users to the database one of wich already has a duplicate name in the database (the number of the duplicate user is also changed from 35 to 89 to show that the user won't be updated but just ingored). In the database the `name` column is set to `unique`.
+    - Now we bulk insert 2 users to the database one of wich already has a duplicate name in the database (the number of the duplicate user is also changed from 35 to 89 to show that the user won't be updated but just ignored). In the database the `name` column is set to `unique`.
         ```javascript
         // Create a new Bookshelf collection.
         var userCollection = User.collection();
