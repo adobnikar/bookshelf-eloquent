@@ -525,10 +525,10 @@ var user = await User.where('id', 57).first({ withDeleted: true });
 
 ## Miscellaneous
 
-- **.fakeSync([options])** → Promise<[Bookshelf  Sync](https://github.com/tgriesser/bookshelf/blob/master/src/sync.js)>
+- **.fakeSync([options])** → Promise\<[Bookshelf  Sync](https://github.com/tgriesser/bookshelf/blob/master/src/sync.js)\>
     - {object} `[options]` Bookshelf [fetch options](http://bookshelfjs.org/#Model-instance-fetch).
 
-    Triggers plugins (like [bookshelf-paranoia](https://github.com/estate/bookshelf-paranoia)) that listen to the Bookshelf fetch events by triggering the `fetching` event. Function returns a Promise<[Bookshelf  Sync](https://github.com/tgriesser/bookshelf/blob/master/src/sync.js)>.
+    Triggers plugins (like [bookshelf-paranoia](https://github.com/estate/bookshelf-paranoia)) that listen to the Bookshelf fetch events by triggering the `fetching` event. Function returns a Promise\<[Bookshelf  Sync](https://github.com/tgriesser/bookshelf/blob/master/src/sync.js)\>.
 
     **Example**
     ```javascript
@@ -542,10 +542,10 @@ var user = await User.where('id', 57).first({ withDeleted: true });
     select * from `users` where `id` = 57
     ```
 
-- **.buildQuery([options])** → Promise<[Bookshelf  Sync](https://github.com/tgriesser/bookshelf/blob/master/src/sync.js)>
+- **.buildQuery([options])** → Promise\<[Bookshelf  Sync](https://github.com/tgriesser/bookshelf/blob/master/src/sync.js)\>
     - {object} `[options]` Bookshelf [fetch options](http://bookshelfjs.org/#Model-instance-fetch).
 
-    Should be used for subquery building. Similar to the `fakeSync` function. Triggers plugins (like [bookshelf-paranoia](https://github.com/estate/bookshelf-paranoia)) that listen to the Bookshelf fetch events by triggering the `fetching` event. Also selects the Bookshelf [fetch options](http://bookshelfjs.org/#Model-instance-fetch) columns. Function returns a Promise<[Bookshelf  Sync](https://github.com/tgriesser/bookshelf/blob/master/src/sync.js)>.
+    Should be used for subquery building. Similar to the `fakeSync` function. Triggers plugins (like [bookshelf-paranoia](https://github.com/estate/bookshelf-paranoia)) that listen to the Bookshelf fetch events by triggering the `fetching` event. Also selects the Bookshelf [fetch options](http://bookshelfjs.org/#Model-instance-fetch) columns. Function returns a Promise\<[Bookshelf  Sync](https://github.com/tgriesser/bookshelf/blob/master/src/sync.js)\>.
 
     **Example**
     ```javascript
@@ -607,7 +607,7 @@ var user = await User.where('id', 57).first({ withDeleted: true });
     ]);
     ```
 
-- **.insert([ignoreDuplicates = false])** → Promise<Bookshelf collection> (Promise<this>)
+- **.insert([ignoreDuplicates = false])** → Promise\<Bookshelf collection\> (Promise\<this\>)
     - {boolean} `ignoreDuplicates` Add 'on duplicate ignore' to the SQL statement.
     If `ignoreDuplicates` is `false` then all the inserted models will also get their ids automatically attached.
     If `ignoreDuplicates` is `true` then the automatic retrieval of model ids is not possible (in MySQL). If you need this functionality please use the `insertBy` function instead.
@@ -733,8 +733,7 @@ var user = await User.where('id', 57).first({ withDeleted: true });
     true
     ```
 
-.insertBy = function(uniqKeyAttrs = [], returnAttrs = [])
-- **.insertBy(uniqueColumns, [selectColumns])** → Promise<Bookshelf collection> (Promise<this>)
+- **.insertBy(uniqueColumns, [selectColumns])** → Promise\<Bookshelf collection\> (Promise\<this\>)
     - {string|string[]} `uniqueColumns` List of columns in the unique index.
     - {string|string[]} `[selectColumns]` List of columns that we want to select from the database. Id column will always be selected.
 
@@ -769,6 +768,9 @@ var user = await User.where('id', 57).first({ withDeleted: true });
     ```
     prints:
     ```
-    true
-    true
+    [
+        { name: 'Geovanny Waelchi Jr.', number: 81, id: 1 },
+        { name: 'Christ Green', number: 35, id: 2 },
+        { name: 'Timmy Windler', number: 2, id: 3 }
+    ]
     ```
