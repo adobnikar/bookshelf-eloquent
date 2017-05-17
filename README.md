@@ -28,6 +28,8 @@ bookshelf.plugin(require('bookshelf-eloquent'));
 
 ## List of all functions
 
+### Model
+
 - **.get([options])** → Promise\<Bookshelf Collection\>,
 - **.first([options])** → Promise\<Bookshelf Model\>,
 - **.select(columns)** → Bookshelf  model (this) / function is chainable,
@@ -41,6 +43,9 @@ bookshelf.plugin(require('bookshelf-eloquent'));
 - **.fakeSync([options])** → Promise\<[Bookshelf  Sync](https://github.com/tgriesser/bookshelf/blob/master/src/sync.js)\>
 - **.buildQuery([options])** → Promise\<[Bookshelf  Sync](https://github.com/tgriesser/bookshelf/blob/master/src/sync.js)\>
 - **.useTableAlias(alias)** → Bookshelf  model (this) / function is chainable
+
+### Collection
+
 - **.add(data, [options])** → Bookshelf model | Bookshelf collection (this) / function is chainable
 - **.addMemo(data, [options])** → Bookshelf model | Bookshelf collection (this) / function is chainable
 - **.insert([ignoreDuplicates = false])** → Promise\<Bookshelf collection\> (Promise\<this\>)
