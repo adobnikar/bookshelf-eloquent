@@ -24,7 +24,7 @@ module.exports = Bookshelf.model('Post', {
   },
 
   createdBy: function() {
-    return this.belongsTo('User', 'createdById');
+    return this.hasOne('User', 'createdById');
   },
 
   tags: function() {

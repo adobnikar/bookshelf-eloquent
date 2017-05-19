@@ -14,10 +14,10 @@ module.exports = Bookshelf.model('Comment', {
   softDelete: true,
 
   post: function() {
-    return this.belongsTo('Post', 'postId');
+    return this.hasOne('Post', 'postId');
   },
 
   createdBy: function() {
-    return this.belongsTo('User', 'createdById');
+    return this.hasOne('User', 'createdById');
   },
 });

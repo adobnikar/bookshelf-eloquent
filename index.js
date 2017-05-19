@@ -433,6 +433,7 @@ module.exports = function(Bookshelf) {
             [ids, collection, withRelationName]));
           break;
         case 'belongsTo':
+        case 'hasOne':
           loadRelationTasks.push(eagerLoadBelongsToRelation.apply(this,
             [collection, withRelationName]));
           break;
@@ -760,7 +761,8 @@ module.exports = function(Bookshelf) {
         // Check if this is a supported relation
         if ((relatedData.type !== 'belongsToMany') &&
           (relatedData.type !== 'belongsTo') &&
-          (relatedData.type !== 'hasMany'))
+          (relatedData.type !== 'hasMany') &&
+          (relatedData.type !== 'hasOne'))
           throw new Error('Relation type ' + relatedData.type +
             ' not supported/implemented for the with statement.');
 
@@ -884,6 +886,7 @@ module.exports = function(Bookshelf) {
         bookQuery.whereIn(relatedData.foreignKey, subquery);
         break;
       case 'belongsTo':
+      case 'hasOne':
         if (isString(subquery))
           subquery = knex.raw('??.??', [subquery, relatedData.foreignKey]);
         else subquery = subquery.select(relatedData.foreignKey);

@@ -26,6 +26,13 @@ let bookshelf = require('bookshelf')(knex);
 bookshelf.plugin(require('bookshelf-eloquent'));
 ```
 
+## List of supported relations
+
+- hasOne
+- belongsTo
+- hasMany
+- belongsToMany
+
 ## List of all functions
 
 ### Model
