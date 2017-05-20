@@ -1518,10 +1518,15 @@ module.exports = function(Bookshelf) {
         if (!ignoreDuplicates && (index === 0) && Number.isInteger(id)) {
           for (let inx = 0; inx < this.length; inx++) {
             let model = this.at(inx);
-            model.set(idAttribute, id);
-            this._byId[id] = model;
-            // increment the id
-            id++;
+            // Check if id was set before inserting.
+            if (model.isNew()) {
+              model.set(idAttribute, id);
+              this._byId[id] = model;
+              // increment the id
+              id++;
+            } else {
+              if (model.id >= id) id = model.id + 1;
+            }
           }
         }
       })
@@ -1670,6 +1675,11 @@ module.exports = function(Bookshelf) {
 
     // add the idAttribute to the returnAttrs - because we need the isNew() function on each model to work
     returnAttrs = union(returnAttrs, [idAttribute]);
+
+    // Set all models to not new.
+    for (let model of this.models) {
+      model.id = null;
+    }
 
     // first perform a selectBy to get the existing models
     return this.selectBy(uniqKeyAttrs, returnAttrs).then(function(collection) {
