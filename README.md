@@ -306,6 +306,32 @@ const Account = require('../models/account');
     select * from `users` where `votes` between 1 and 100
     ```
 
+## Other Knex functions
+
+For the detailed documentation you can checkout the [Knex documentation](http://knexjs.org/). All these functions are chainable.
+
+- .orderBy(column, [direction]) [Knex docs for orderBy](http://knexjs.org/#Builder-orderBy)
+- .orderByRaw(sql) [Knex docs for orderByRaw](http://knexjs.org/#Builder-orderByRaw)
+- .offset(value) / .skip [Knex docs for offset](http://knexjs.org/#Builder-offset)
+- .limit(value) / .take [Knex docs for limit](http://knexjs.org/#Builder-limit)
+
+**Examples:**
+
+- Order users by the time of creation and get the **third page** of results if we display **10 users per page** (skip the first 20 users and display users from 21st to 30th place).
+    ```javascript
+    // Require the user model.
+    const User = require('../models/user');
+
+    var users = await User.select(['id', 'username', 'number'])
+        .orderBy('createdAt')
+        .offset(20).limit(10)
+        .get();
+    ```
+    SQL:
+    ```sql
+    select `id`, `username`, `number` from `users` order by `users`.`createdAt` ASC limit 10 offset 20
+    ```
+
 ## With (Eager loading)
 
 - **.with(withRelated, [signleRelationSubquery])** → Bookshelf  model (this) / function is chainable

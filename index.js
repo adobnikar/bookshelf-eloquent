@@ -213,6 +213,34 @@ module.exports = function(Bookshelf) {
   }
 
   // ---------------------------------------------------------------------------
+  // ------ Knex Offset & Limit ------------------------------------------------
+  // ---------------------------------------------------------------------------
+
+  modelExt.offset = function(...args) {
+    return this.query('offset', ...args);
+  };
+
+  modelExt.limit = function(...args) {
+    return this.query('limit', ...args);
+  };
+
+  modelExt.skip = function(...args) {
+    return this.query('offset', ...args);
+  };
+
+  modelExt.take = function(...args) {
+    return this.query('limit', ...args);
+  };
+
+  // ---------------------------------------------------------------------------
+  // ------ Knex orderByRaw ----------------------------------------------------
+  // ---------------------------------------------------------------------------
+
+  modelExt.orderByRaw = function(...args) {
+    return this.query('orderByRaw', ...args);
+  };
+
+  // ---------------------------------------------------------------------------
   // ------ Select, Delete, First, Get -----------------------------------------
   // ---------------------------------------------------------------------------
 
@@ -1194,6 +1222,13 @@ module.exports = function(Bookshelf) {
   for (let method in modelExt) {
     if (!modelExt.hasOwnProperty(method)) continue;
     if (method === 'delete') continue;
+    staticModelExt[method] = function(...args) {
+      return this.forge()[method](...args);
+    };
+  }
+
+  let methodsToExposeOnStaticModel = ['orderBy'];
+  for (let method of methodsToExposeOnStaticModel) {
     staticModelExt[method] = function(...args) {
       return this.forge()[method](...args);
     };
