@@ -37,15 +37,20 @@ bookshelf.plugin(require('bookshelf-eloquent'));
 
 ### Model
 
-- **.get([options])** → Promise\<Bookshelf Collection\>,
-- **.first([options])** → Promise\<Bookshelf Model\>,
-- **.select(columns)** → Bookshelf  model (this) / function is chainable,
-- Knex where statements (see the **Where statements** section),
+- **.get([options])** → Promise\<Bookshelf Collection\>
+- **.first([options])** → Promise\<Bookshelf Model\>
+- **.select(columns)** → Bookshelf  model (this) / function is chainable
+- Knex where statements (see the **Where statements** section)
+- **.orderBy(column, [direction])** → Bookshelf  model (this) / function is chainable [Knex docs for orderBy](http://knexjs.org/#Builder-orderBy)
+- **.orderByRaw(sql)** → Bookshelf  model (this) / function is chainable [Knex docs for orderByRaw](http://knexjs.org/#Builder-orderByRaw)
+- **.offset(value) / .skip** → Bookshelf  model (this) / function is chainable [Knex docs for offset](http://knexjs.org/#Builder-offset)
+- **.limit(value) / .take** → Bookshelf  model (this) / function is chainable [Knex docs for limit](http://knexjs.org/#Builder-limit)
 - **.with(withRelated, [signleRelationSubquery])** → Bookshelf  model (this) / function is chainable
 - **.withSelect(relationName, columns, [subquery])** → Bookshelf  model (this) / function is chainable
 - **.withCount(withRelated, [signleRelationSubquery])** → Bookshelf  model (this) / function is chainable
 - **.has(relationName, [operator], [operand1], [operand2]) / .orHas** → Bookshelf  model (this) / function is chainable
 - **.whereHas(relationName, [subquery], [operator], [operand1], [operand2]) / .orWhereHas** → Bookshelf  model (this) / function is chainable
+- **.destroyAll([options]) / .deleteAll** → Promise\<Bookshelf Model\>
 - **.withDeleted() / .withTrashed** → Bookshelf model (this) / function is chainable
 - **.fakeSync([options])** → Promise\<[Bookshelf  Sync](https://github.com/tgriesser/bookshelf/blob/master/src/sync.js)\>
 - **.buildQuery([options])** → Promise\<[Bookshelf  Sync](https://github.com/tgriesser/bookshelf/blob/master/src/sync.js)\>
