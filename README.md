@@ -572,6 +572,27 @@ If you need even more power, you may use the `whereHas` and `orWhereHas` methods
         );
         ```
 
+## Destroy / Delete All
+
+- **.destroyAll([options]) / .deleteAll** → Promise\<Bookshelf Model\>
+    - {object} `[options]` Bookshelf [destroy options](http://bookshelfjs.org/#Model-instance-destroy).
+
+    This function deletes all model records where their id is bigger or equal 0 (>= 0). It supports the [bookshelf-paranoia](https://github.com/estate/bookshelf-paranoia) plugin for soft deleting.
+
+    **Examples:**
+
+    ```javascript
+    // Require the user model.
+    const User = require('../models/user');
+
+    // Delete all users.
+    await User.deleteAll();
+    ```
+    SQL:
+    ```sql
+    delete from `users` where `id` >= 0
+    ```
+
 ## WithDeleted / WithTrashed (bookshelf-paranoia)
 
 - **.withDeleted() / .withTrashed** → Bookshelf model (this) / function is chainable

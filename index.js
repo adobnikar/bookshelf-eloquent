@@ -1328,6 +1328,15 @@ module.exports = function(Bookshelf) {
    */
   staticModelExt.delete = staticModelExt.destroy;
 
+  // Delete all.
+
+  staticModelExt.destroyAll = function(options) {
+    return this.forge().where(this.prototype.idAttribute, '>=', 0)
+      .destroy(options);
+  };
+
+  staticModelExt.deleteAll = staticModelExt.destroyAll;
+
   /**
    * Select a model based on data and insert if not found
    * @param {Object} data
