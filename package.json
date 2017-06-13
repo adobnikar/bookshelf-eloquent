@@ -16,6 +16,7 @@
   },
   "keywords": [
     "bookshelf",
+    "knex",
     "eloquent",
     "extension",
     "laravel",
@@ -24,7 +25,16 @@
     "withCount",
     "with count",
     "with",
-    "relation"
+    "relation",
+    "take",
+    "skip",
+    "limit",
+    "offset",
+    "destroyAll",
+    "destroy all",
+    "orderBy",
+    "table alias",
+    "bulk insert"
   ],
   "author": "Andraž Dobnikar <andraz.dobnikar@hotmail.com>",
   "license": "MIT",

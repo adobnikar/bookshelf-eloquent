@@ -1195,7 +1195,7 @@ module.exports = function(Bookshelf) {
 
       // Check if the relation exists.
       if (!(firstRelationName in this))
-        return modelHas.apply(this, relationName);
+        return modelHas.apply(this, [relationName]);
     }
 
     return this.whereHas(relationName, null, operator, operand1, operand2);
