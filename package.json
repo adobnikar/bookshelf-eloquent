@@ -1,6 +1,6 @@
 {
   "name": "bookshelf-eloquent",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Bookshelf extension that adds the functionality of eloquent.",
   "main": "index.js",
   "files": [
