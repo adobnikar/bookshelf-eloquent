@@ -1465,10 +1465,10 @@ module.exports = function(Bookshelf) {
       return this;
     } else {
       if (this.eloquent.caseSensitive === true)
-        this.eloquent.collectionAddMemoCaseSensitive
+        return this.eloquent.collectionAddMemoCaseSensitive
           .apply(this, [attrs, options]);
       else
-        this.eloquent.collectionAddMemo.apply(this, [attrs, options]);
+        return this.eloquent.collectionAddMemo.apply(this, [attrs, options]);
     }
   };
 
