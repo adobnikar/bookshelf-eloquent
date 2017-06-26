@@ -12,13 +12,23 @@ const isString = require('lodash/isString');
 const isArray = require('lodash/isArray');
 const isFunction = require('lodash/isFunction');
 const isPlainObject = require('lodash/isPlainObject');
+const isDate = require('lodash/isDate');
+const isNumber = require('lodash/isNumber');
 const union = require('lodash/union');
 const at = require('lodash/at');
 
 // Eloquent plugin -
 // Adds the functionality and function names of eloquent (like whereHas).
 // -----
-module.exports = function(Bookshelf) {
+module.exports = function(Bookshelf, options) {
+  // Set default options values.
+  const globalOptions = options || {};
+  if (globalOptions.withCountSuffix == null)
+    globalOptions.withCountSuffix = 'Count';
+  // Source: https://bugs.mysql.com/bug.php?id=68760
+  if (globalOptions.roundDateTime == null)
+    globalOptions.roundDateTime = true;
+
   const modelProto  = Bookshelf.Model.prototype;
   const collectionProto = Bookshelf.Collection.prototype;
   const knex = Bookshelf.knex;
@@ -973,7 +983,7 @@ module.exports = function(Bookshelf) {
           token = token.substr(0, 1).toUpperCase() + token.substr(1);
           tokens[i] = token;
         }
-        tokens.push('Count');
+        tokens.push(globalOptions.withCountSuffix);
 
         // Check if the callback is a function and apply the callback.
         if (isFunction(callback)) callback(subQuery);
@@ -1194,7 +1204,7 @@ module.exports = function(Bookshelf) {
       let firstRelationName = tokens[0];
 
       // Check if the relation exists.
-      if (!(firstRelationName in this))
+      if (!isFunction(this[firstRelationName]))
         return modelHas.apply(this, [relationName]);
     }
 
@@ -1542,6 +1552,100 @@ module.exports = function(Bookshelf) {
       .return(this);
   };
 
+  function arrayToObj(array, defaultValue = null) {
+    if (!isArray(array)) return array;
+
+    let obj = {}
+    for (let element of array) {
+      obj[element] = defaultValue;
+    }
+    return obj;
+  }
+
+  function objToArray(columns) {
+    let array = [];
+    for (let col in columns) {
+      if (!columns.hasOwnProperty(col)) continue;
+      array.push(col);
+    }
+    return array;
+  }
+
+  function detectColumnTypes(data, columns) {
+    columns = arrayToObj(columns, "String");
+    for (let col in columns) {
+      if (!columns.hasOwnProperty(col)) continue;
+      for (let d of data) {
+        let value = d[col];
+        if (value == null) continue;
+        if (isNumber(value)) columns[col] = "Number";
+        else if (isDate(value)) columns[col] = "Date";
+      }
+    }
+    return columns;
+  }
+
+  function serializeNumber(value) {
+    if (value == null) return null;
+    return Number(value);
+  }
+
+  function serializeDate(value) {
+    if (value == null) return null;
+    value = new Date(value);
+    if (globalOptions.roundDateTime) {
+      // Round to nearest second.
+      let ms = value.getMilliseconds();
+      if (ms >= 500) {
+        value = new Date(value.getTime() + 1000);
+      }
+    }
+
+    // Truncate to second.
+    value.setMilliseconds(0);
+
+    return value;
+  }
+
+  function serializeString(value, Model) {
+    if (value == null) return null;
+    value = String(value);
+
+    // NOTE: if the collation is case insensitive the it is good to use toLowerCase()
+    if (Model.eloquent.caseSensitive !== true)
+      value = value.toLowerCase();
+
+    return value;
+  }
+
+  function resolveSerializers(columns) {
+    let obj = {};
+    for (let col in columns) {
+      if (!columns.hasOwnProperty(col)) continue;
+      let val = columns[col];
+      if (val === "String") obj[col] = serializeString;
+      else if (val === "Number") obj[col] = serializeNumber;
+      else if (val === "Date") obj[col] = serializeDate;
+      else obj[col] = val;
+    }
+    return obj;
+  }
+
+  function calcUniqueRowHash(row, serializers, Model) {
+    // calculate the unique hash of this row
+    let uniqValues = []; // at(row, uniqKeyAttrs);
+    for (let col in serializers) {
+      if (!serializers.hasOwnProperty(col)) continue;
+      let value = at(row, [col])[0];
+      // Type problem - when stuff gets saved to the database values get changed a bit
+      // That is why the serializers get applied here.
+      let serializer = serializers[col];
+      value = serializer(value, Model);
+      uniqValues.push(value);
+    }
+    return JSON.stringify(uniqValues);
+  }
+
   /**
    * Select [selectAttrs] from the table by the [uniqKeyAttrs] instead of the default id.
    * Not really useful for anything else than being a helper function for insertBy.
@@ -1549,11 +1653,13 @@ module.exports = function(Bookshelf) {
    * @param {string|string[]} uniqKeyAttrs List of unique key attributes.
    * @param {string|string[]} selectAttrs List of attributes that you want to get from database.
    */
-  collectionExt.selectBy = function(uniqKeyAttrs = [], selectAttrs = []) {
+  collectionExt.selectBy = async function(uniqKeyAttrs = [], selectAttrs = []) {
     // validate arguments
     if (isString(uniqKeyAttrs)) uniqKeyAttrs = [uniqKeyAttrs];
-    if (uniqKeyAttrs.constructor !== Array)
-      throw new Error('Must pass an array or string for the ' +
+    let uniqKeySerializers = arrayToObj(uniqKeyAttrs);
+    uniqKeyAttrs = objToArray(uniqKeySerializers);
+    if (!isPlainObject(uniqKeySerializers))
+      throw new Error('Must pass an array, object or string for the ' +
         'uniqKeyAttrs argument.');
     if (uniqKeyAttrs.length < 1)
       throw new Error('The array of uniqKeyAttrs must be at ' +
@@ -1588,21 +1694,9 @@ module.exports = function(Bookshelf) {
       // get the non-leaf values and the leaf value
       let uniqPath = at(model.attributes, pathKeys);
       let leafValue = model.attributes[leafColumn];
-      let uniqValues = uniqPath.slice(0);
-      uniqValues.push(leafValue);
 
       // calculate the uniq hash of this wherePath
       let uniqPathHash = JSON.stringify(uniqPath);
-      // NOTE: if the collation is case insensitive the it is good to use toLowerCase()
-      let uniqHash = JSON.stringify(uniqValues);
-      if (this.eloquent.caseSensitive !== true)
-        uniqHash = uniqHash.toLowerCase();
-
-      // add the model to the index
-      if (index.has(uniqHash))
-        throw new Error('This collection has models duplicate unique keys. ' +
-          'SelectBy cannot be performed.');
-      index.set(uniqHash, model);
 
       // check if this uniq path already present in the whereMap
       if (!whereMap.has(uniqPathHash))
@@ -1632,35 +1726,59 @@ module.exports = function(Bookshelf) {
       first = false;
     }
 
-    // execute the bulk select
-    return knexQuery
-      .bind(this)
-      .map(function(row) {
-        // calculate the unique hash of this row
-        let uniqValues = at(row, uniqKeyAttrs);
-        // NOTE: If the collation is case insensitive the it is good to use toLowerCase().
-        let uniqHash = JSON.stringify(uniqValues);
-        if (this.eloquent.caseSensitive !== true)
-          uniqHash = uniqHash.toLowerCase();
+    // Execute the bulk select.
+    let rows = await knexQuery;
 
-        // check if a model with this hash exists - sanity check
-        if (!index.has(uniqHash))
-          throw new Error('The SelectBy query somehow got a row ' +
-            'back that was not even requested.');
+    // Get all columns that need to have the type auto resolved.
+    let autoTypeColumns = [];
+    for (let col in uniqKeySerializers) {
+      if (!uniqKeySerializers.hasOwnProperty(col)) continue;
+      let val = uniqKeySerializers[col];
+      if (isFunction(val)) continue;
+      autoTypeColumns.push(col);
+    }
+    autoTypeColumns = detectColumnTypes(rows, autoTypeColumns);
+    autoTypeColumns = resolveSerializers(autoTypeColumns);
+    for (let col in autoTypeColumns) {
+      if (!autoTypeColumns.hasOwnProperty(col)) continue;
+      uniqKeySerializers[col] = autoTypeColumns[col];
+    }
 
-        // get the model to update
-        let model = index.get(uniqHash);
+    for (let model of this.models) {
+      // Index row by it's unique hash.
+      let uniqHash = calcUniqueRowHash(model.attributes, uniqKeySerializers, this);
 
-        // update the model with the selected values
-        model.set(row);
+      // add the model to the index
+      if (index.has(uniqHash))
+        throw new Error('This collection has models duplicate unique keys. ' +
+          'SelectBy cannot be performed.');
+      index.set(uniqHash, model);
+    }
 
-        // if the model idAttribute was also selected then we also need to update the _byId index
-        if (idAttribute in row) {
-          let id = row[idAttribute];
-          this._byId[id] = model;
-        }
-      })
-      .return(this);
+    for (let row of rows) {
+      // Calculate unique row hash.
+      let uniqHash = calcUniqueRowHash(row, uniqKeySerializers, this);
+
+      // check if a model with this hash exists - sanity check
+      if (!index.has(uniqHash))
+        throw new Error('The SelectBy query somehow got a row ' +
+          'back that was not even requested. You can solve this issue by ' +
+          'implementing a custom column serializer.');
+
+      // get the model to update
+      let model = index.get(uniqHash);
+
+      // update the model with the selected values
+      model.set(row);
+
+      // if the model idAttribute was also selected then we also need to update the _byId index
+      if (idAttribute in row) {
+        let id = row[idAttribute];
+        this._byId[id] = model;
+      }
+    }
+
+    return this;
   };
 
   /**
@@ -1672,7 +1790,7 @@ module.exports = function(Bookshelf) {
    * @param {string|string[]} uniqKeyAttrs List of unique key attributes.
    * @param {string|string[]} returnAttrs List of attributes that you want to get from database.
    */
-  collectionExt.insertBy = function(uniqKeyAttrs = [], returnAttrs = []) {
+  collectionExt.insertBy = async function(uniqKeyAttrs = [], returnAttrs = []) {
     // validate arguments (uniqKeyAttrs will be validated by the selectBy function)
     if (isString(returnAttrs)) returnAttrs = [returnAttrs];
     if (returnAttrs.constructor !== Array)
@@ -1691,31 +1809,39 @@ module.exports = function(Bookshelf) {
     }
 
     // first perform a selectBy to get the existing models
-    return this.selectBy(uniqKeyAttrs, returnAttrs).then(function(collection) {
-      // create a new collection for the models that need to be inserted
-      let insertCollection = this.model.collection();
+    let collection = await this.selectBy(uniqKeyAttrs, returnAttrs);
 
-      // insert the models that are new into insertCollection
-      for (let model of collection.models) {
-        if (model.isNew()) insertCollection.add(model);
-      }
+    // create a new collection for the models that need to be inserted
+    let insertCollection = this.model.collection();
 
-      // if there are 0 models to insert the finish immediately
-      if (insertCollection.length < 1)
-        // return this - this function is chainable
-        return this;
+    // insert the models that are new into insertCollection
+    for (let model of collection.models) {
+      if (model.isNew()) insertCollection.add(model);
+    }
 
-      // insert the models and ignore duplicates
-      return insertCollection.insert(true).then(function(insertCollection) {
-        // after the models are inserted we have to get their returnAttrs
-        return this.selectBy(uniqKeyAttrs, returnAttrs)
-          .then(function(insertCollection) {
-            // finally return the original collection
-            // return this - this function is chainable
-            return this;
-          });
-      });
-    });
+    // if there are 0 models to insert the finish immediately
+    if (insertCollection.length < 1)
+      // return this - this function is chainable
+      return this;
+
+    // insert the models and ignore duplicates
+    insertCollection = await insertCollection.insert(true);
+
+    // after the models are inserted we have to get their returnAttrs
+    insertCollection = await this.selectBy(uniqKeyAttrs, returnAttrs);
+
+    // Check if all models were matched to their ids.
+    for (let model of insertCollection.models) {
+      if (model.isNew())
+        throw new Error('Ids of all models could not be retrieved. ' +
+          'Values that you have inserted got distorted because they were too precise. ' +
+          'Example: When DateTime is stored to the database the miliseconds could get rounded to the closest second. ' +
+          'Please consider re-formatting such columns before inserting them to the database.');
+    }
+
+    // finally return the original collection
+    // return this - this function is chainable
+    return this;
   };
 
   Bookshelf.Collection = Bookshelf.Collection.extend(collectionExt);
