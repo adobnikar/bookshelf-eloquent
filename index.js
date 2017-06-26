@@ -1555,7 +1555,7 @@ module.exports = function(Bookshelf, options) {
   function arrayToObj(array, defaultValue = null) {
     if (!isArray(array)) return array;
 
-    let obj = {}
+    let obj = {};
     for (let element of array) {
       obj[element] = defaultValue;
     }
@@ -1572,14 +1572,14 @@ module.exports = function(Bookshelf, options) {
   }
 
   function detectColumnTypes(data, columns) {
-    columns = arrayToObj(columns, "String");
+    columns = arrayToObj(columns, 'String');
     for (let col in columns) {
       if (!columns.hasOwnProperty(col)) continue;
       for (let d of data) {
         let value = d[col];
         if (value == null) continue;
-        if (isNumber(value)) columns[col] = "Number";
-        else if (isDate(value)) columns[col] = "Date";
+        if (isNumber(value)) columns[col] = 'Number';
+        else if (isDate(value)) columns[col] = 'Date';
       }
     }
     return columns;
@@ -1623,9 +1623,9 @@ module.exports = function(Bookshelf, options) {
     for (let col in columns) {
       if (!columns.hasOwnProperty(col)) continue;
       let val = columns[col];
-      if (val === "String") obj[col] = serializeString;
-      else if (val === "Number") obj[col] = serializeNumber;
-      else if (val === "Date") obj[col] = serializeDate;
+      if (val === 'String') obj[col] = serializeString;
+      else if (val === 'Number') obj[col] = serializeNumber;
+      else if (val === 'Date') obj[col] = serializeDate;
       else obj[col] = val;
     }
     return obj;
@@ -1746,7 +1746,8 @@ module.exports = function(Bookshelf, options) {
 
     for (let model of this.models) {
       // Index row by it's unique hash.
-      let uniqHash = calcUniqueRowHash(model.attributes, uniqKeySerializers, this);
+      let uniqHash = calcUniqueRowHash(model.attributes,
+        uniqKeySerializers, this);
 
       // add the model to the index
       if (index.has(uniqHash))
@@ -1834,9 +1835,11 @@ module.exports = function(Bookshelf, options) {
     for (let model of insertCollection.models) {
       if (model.isNew())
         throw new Error('Ids of all models could not be retrieved. ' +
-          'Values that you have inserted got distorted because they were too precise. ' +
-          'Example: When DateTime is stored to the database the miliseconds could get rounded to the closest second. ' +
-          'Please consider re-formatting such columns before inserting them to the database.');
+          'Values that you have inserted got distorted because they were ' +
+          'too precise. Example: When DateTime is stored to the database the ' +
+          'miliseconds could get rounded to the closest second. ' +
+          'Please consider re-formatting such columns before inserting them ' +
+          'to the database.');
     }
 
     // finally return the original collection
