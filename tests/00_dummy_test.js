@@ -17,3 +17,12 @@ exports.tearDown = async function() {
   // Clean everything after test. This is an optional function.
   // ...
 };
+
+// Test only this file.
+/* (async() => {
+  await exports.setUp();
+  await exports.test();
+  await exports.tearDown();
+})().catch((error) => {
+  console.error(error);
+}); */
