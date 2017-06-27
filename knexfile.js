@@ -14,7 +14,7 @@ module.exports = {
     password: process.env.MYSQL_PASSWORD || '',
     database: process.env.MYSQL_DATABASE || 'bookshelf_eloquent',
     charset: 'utf8',
-    timezone: 'UTC',
+    timezone: '+01:00',
   },
   pool: {
     min: 2,

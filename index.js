@@ -1592,6 +1592,20 @@ module.exports = function(Bookshelf, options) {
 
   function serializeDate(value) {
     if (value == null) return null;
+
+    // Account for automatic timezone conversion.
+    if (isString(value)) {
+      let tz = at(knex, 'client.config.connection.timezone')[0];
+      tz = tz || 'local';
+      if (tz.trim() !== 'local') {
+        let tokens = value.split(' ');
+        tokens = tokens.filter((v) => { return (v.length > 0); })
+        if (tokens.length < 2)
+          value += ' 00:00:00';
+        value = value + ' ' + tz;
+      }
+    }
+
     value = new Date(value);
     if (globalOptions.roundDateTime) {
       // Round to nearest second.

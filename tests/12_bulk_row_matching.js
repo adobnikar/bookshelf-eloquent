@@ -61,6 +61,21 @@ exports.test = async function() {
     timestamp: "2017-06-03",
   });
 
+  let m3 = collection.add({
+    name: 3,
+    integer: "154",
+    bigInteger: "1293",
+    text: " as as a a ",
+    string: " as as as as   ",
+    float: 123.45450000000,
+    decimal: 12345.45450000000,
+    boolean: 1,
+    date: "2017-06-03 11:05:01",
+    dateTime: "2017-06-03 11:05:01",
+    time: "2017-06-03 11:05:01",
+    timestamp: "2017-06-03 11:05:01",
+  });
+
   await collection.insertBy([
     "integer",
     "bigInteger",
@@ -80,6 +95,8 @@ exports.test = async function() {
   assert(m1.id != null);
   m2 = m2.toJSON();
   assert(m2.id != null);
+  m3 = m3.toJSON();
+  assert(m3.id != null);
 
   // Clear the empty table.
   await Empty.deleteAll();
