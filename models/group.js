@@ -1,5 +1,7 @@
 'use strict';
 
+const connection = require('../knexfile');
+const Knex = require('knex')(connection);
 const Bookshelf = require('../bookshelf.js');
 
 require('./user');
@@ -30,5 +32,17 @@ module.exports = Bookshelf.model('Group', {
 
   members: function() {
     return this.hasMany('Enrolment', 'groupId');
+  },
+
+  scopes: {
+    active: function(qb) {
+      qb.where({status: 'Active'});
+    },
+    nameContains: function(qb, name) {
+      qb.where(Knex.raw('name LIKE ?', '%' + name + '%'));
+    },
+    filterOwner: function(qb, id) {
+      qb.where('ownerId', id);
+    },
   },
 });

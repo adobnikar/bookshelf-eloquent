@@ -27,6 +27,10 @@ module.exports = Bookshelf.model('User', {
     return this.hasMany('Group', 'ownerId');
   },
 
+  mgroups: function() {
+    return this.hasMany('Group', 'ownerId').nameContains('math');
+  },
+
   posts: function() {
     return this.hasMany('Post', 'createdById');
   },

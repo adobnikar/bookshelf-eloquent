@@ -122,6 +122,12 @@ bookshelf-paranoia@^0.11.0:
     lodash.merge "^4.3.5"
     lodash.result "^4.3.0"
 
+bookshelf-scopes@^1.5.0:
+  version "1.5.0"
+  resolved "https://registry.yarnpkg.com/bookshelf-scopes/-/bookshelf-scopes-1.5.0.tgz#a6c25aa2beaf400f1b4be9c77feb9bfe7b585db7"
+  dependencies:
+    lodash "^3.10.1"
+
 bookshelf@^0.10.3:
   version "0.10.3"
   resolved "https://registry.yarnpkg.com/bookshelf/-/bookshelf-0.10.3.tgz#72558204e83815f8e5bba6fd808702563e72b3e4"
@@ -734,6 +740,10 @@ lodash.merge@^4.3.5:
 lodash.result@^4.3.0:
   version "4.5.2"
   resolved "https://registry.yarnpkg.com/lodash.result/-/lodash.result-4.5.2.tgz#cb45b27fb914eaa8d8ee6f0ce7b2870b87cb70aa"
+
+lodash@^3.10.1:
+  version "3.10.1"
+  resolved "https://registry.yarnpkg.com/lodash/-/lodash-3.10.1.tgz#5bf45e8e49ba4189e17d482789dfd15bd140b7b6"
 
 lodash@^4.13.1, lodash@^4.17.4, lodash@^4.6.0:
   version "4.17.4"

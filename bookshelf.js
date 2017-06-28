@@ -11,6 +11,7 @@ Bookshelf.plugin('virtuals');
 
 // Community plugins.
 Bookshelf.plugin(require('bookshelf-paranoia'), {field: 'deletedAt'});
+Bookshelf.plugin(require('bookshelf-scopes'));
 
 // Load eloquent plugin.
 const path = require('path');
