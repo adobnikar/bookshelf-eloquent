@@ -710,8 +710,20 @@ module.exports = function(Bookshelf, options) {
       let relatedModel = relatedModelIndex.get(relatedId);
 
       // copy over all own properties
+      let copyProperties = new Set([
+        "attributes",
+        "_previousAttributes",
+        "changed",
+        "relations",
+        "cid",
+        "id",
+        "_events",
+        "_eventsCount",
+        "eloquent",
+      ]);
       for (var property in relatedModel) {
         if (!relatedModel.hasOwnProperty(property)) continue;
+        if (!copyProperties.has(property)) continue;
         newRelation[property] = relatedModel[property];
       }
 

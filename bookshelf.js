@@ -7,6 +7,7 @@ const Bookshelf = require('bookshelf')(Knex);
 // Bookshelf supported plugins.
 Bookshelf.plugin('registry');
 Bookshelf.plugin('visibility');
+Bookshelf.plugin('virtuals');
 
 // Community plugins.
 Bookshelf.plugin(require('bookshelf-paranoia'), {field: 'deletedAt'});

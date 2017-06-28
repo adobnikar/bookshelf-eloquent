@@ -3,6 +3,7 @@
 const Bookshelf = require('../bookshelf.js');
 
 require('./user');
+require('./user-virtuals');
 require('./enrolment');
 
 module.exports = Bookshelf.model('Group', {
@@ -21,6 +22,10 @@ module.exports = Bookshelf.model('Group', {
 
   owner: function() {
     return this.belongsTo('User', 'ownerId');
+  },
+
+  user: function() {
+    return this.belongsTo('UserVirtuals', 'ownerId');
   },
 
   members: function() {
