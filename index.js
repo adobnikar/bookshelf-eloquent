@@ -17,6 +17,20 @@ const isNumber = require('lodash/isNumber');
 const union = require('lodash/union');
 const at = require('lodash/at');
 const drop = require('lodash/drop');
+const clone = require('lodash/clone');
+const isUndefined = require('lodash/isUndefined');
+
+// Check if fn is an async function.
+// Source: https://github.com/tc39/ecmascript-asyncawait/issues/78
+function isAsync(fn) {
+  if (fn == null) {
+    return false;
+  }
+  if (fn.constructor == null) {
+    return false;
+  }
+  return fn.constructor.name === 'AsyncFunction';
+}
 
 // Eloquent plugin -
 // Adds the functionality and function names of eloquent (like whereHas).
@@ -60,6 +74,22 @@ module.exports = function(Bookshelf, options) {
       const options = arguments[1] || {};
       this.eloquent.caseSensitive = (options.caseSensitive === true);
     },
+  };
+
+  commonExt.resetEloquent = function() {
+    // Reset eloquent state.
+    if (this.eloquent == null) {
+      this.eloquent = {};
+
+      // TODO: if this is out of the if as it should be thwn the first
+      // test that fails is with('posts.comments')
+      this.eloquent.fetchOptions = {};
+      this.eloquent.queryBuilderTasksAsync = [];
+      this.eloquent.withCountColumnsAsync = [];
+      this.eloquent.withCountColumns = [];
+      this.eloquent.relationColumns = [];
+      this.eloquent.withs = {};
+    }
   };
 
   // ---------------------------------------------------------------------------
@@ -147,30 +177,85 @@ module.exports = function(Bookshelf, options) {
   // ------ Knex Where Methods -------------------------------------------------
   // ---------------------------------------------------------------------------
 
-  // Query where. To enable query where on collections.
-  commonExt.qWhere = function(...args) {
-    return this.query('where', ...args);
-  };
+  // Inspired by the knex clone function.
+  function applyKnex(targetKnex, knexToApply) {
+    // const cloned = new knexToApply.constructor(knexToApply.client);
+    // targetKnex._method = knexToApply._method;
+    // targetKnex._single = clone(knexToApply._single);
+    // targetKnex._statements = clone(knexToApply._statements);
+    targetKnex._statements =
+      targetKnex._statements.concat(knexToApply._statements);
+    // targetKnex._debug = knexToApply._debug;
 
-  // Query where. To enable query where on collections.
-  commonExt.queryWhere = function(...args) {
-    return this.query('where', ...args);
-  };
+    // `_option` is assigned by the `Interface` mixin.
+    // if (!isUndefined(knexToApply._options)) {
+    //  targetKnex._options = clone(knexToApply._options);
+    // }
 
-  // Query where. To enable query where on collections.
-  commonExt.basicWhere = function(...args) {
-    return this.query('where', ...args);
-  };
+    return targetKnex;
+  }
 
-  if (globalOptions.overrideCollectionWhere) {
-    commonExt.where = function(...args) {
-      return this.query('where', ...args);
+  function wrapCallbackIntoQueryBuilderTask(instance, callback) {
+    let data = {
+      model: instance,
+      callback: callback,
+      knexToApply: null,
+    };
+
+    // Async wrapper.
+    let whereNestedQueryTask = (async(data) => {
+      // Create a clean model instance.
+      let modelInstance = data.model.constructor.forge();
+
+      // Check if the callback function is async.
+      if (isAsync(data.callback))
+        await data.callback.call(modelInstance, modelInstance);
+      else data.callback.call(modelInstance, modelInstance);
+
+      // Await all query building tasks.
+      await modelInstance.runQueryBuildingTasks();
+
+      // Store the query that was built.
+      data.knexToApply = modelInstance.query();
+    })(data);
+
+    // Push the task to the where array.
+    instance.eloquent.queryBuilderTasksAsync.push(whereNestedQueryTask);
+
+    // Override/tap the callback function.
+    return function(qb) {
+      if (data.knexToApply == null)
+        throw new Error('Query building tasks of a nested ' +
+          'where query were not completed.');
+      applyKnex(qb, data.knexToApply);
     };
   }
 
+  function whereTemplate(name) {
+    return function(...args) {
+      // Override/tap if callback function.
+      if ((args.length > 0) && isFunction(args[0]))
+        args[0] = wrapCallbackIntoQueryBuilderTask(this, args[0]);
+      return this.query(name, ...args);
+    };
+  }
+
+  modelExt.where = whereTemplate('where');
+  commonExt.whereNot = whereTemplate('whereNot');
+
+  // Synonims for where. Useful if we do not want
+  // to override the where function on Collection.
+  // Query where. To enable query where on collections.
+  commonExt.qWhere = modelExt.where;
+  commonExt.queryWhere = modelExt.where;
+  commonExt.basicWhere = modelExt.where;
+  if (globalOptions.overrideCollectionWhere) {
+    commonExt.where = modelExt.where;
+  }
+
   // Attach existing "knex where methods" to the model.
-  const whereMethods = ['whereNot', 'whereIn', 'whereNotIn',
-    'whereNull', 'whereNotNull', 'whereExists', 'whereNotExists',
+  const whereMethods = ['whereIn', 'whereNotIn', 'whereNull', 'whereNotNull',
+    'whereExists', 'whereNotExists', 'whereRaw',
   ];
   for (let method of whereMethods) {
     commonExt[method] = function(...args) {
@@ -190,9 +275,8 @@ module.exports = function(Bookshelf, options) {
   // ------ Knex AndWhere Methods ----------------------------------------------
   // ---------------------------------------------------------------------------
 
-  commonExt.andWhere = function(...args) {
-    return this.query('andWhere', ...args);
-  };
+  commonExt.andWhere = whereTemplate('andWhere');
+  commonExt.andWhereNot = whereTemplate('andWhereNot');
 
   for (let method of whereMethods) {
     let andMethodName = 'and' + method.substr(0, 1).toUpperCase() +
@@ -214,9 +298,8 @@ module.exports = function(Bookshelf, options) {
   // ------ Knex OrWhere Methods -----------------------------------------------
   // ---------------------------------------------------------------------------
 
-  commonExt.orWhere = function(...args) {
-    return this.query('orWhere', ...args);
-  };
+  commonExt.orWhere = whereTemplate('orWhere');
+  commonExt.orWhereNot = whereTemplate('orWhereNot');
 
   for (let method of whereMethods) {
     let orMethodName = 'or' + method.substr(0, 1).toUpperCase() +
@@ -239,6 +322,7 @@ module.exports = function(Bookshelf, options) {
   // ---------------------------------------------------------------------------
 
   const whereBetweenMethods = ['whereBetween', 'whereNotBetween',
+    'andWhereBetween', 'andWhereNotBetween',
     'orWhereBetween', 'orWhereNotBetween'];
   for (let method of whereBetweenMethods) {
     commonExt[method] = function(columnName, a, b) {
@@ -279,6 +363,22 @@ module.exports = function(Bookshelf, options) {
   // ------ Select, Delete, First, Get -----------------------------------------
   // ---------------------------------------------------------------------------
 
+  commonExt.runQueryBuildingTasks = async function() {
+    let eloquent = this.eloquent;
+    let fetchOptions = eloquent.fetchOptions;
+
+    // Query building tasks.
+    await Promise.all(eloquent.queryBuilderTasksAsync);
+    eloquent.queryBuilderTasksAsync = [];
+    // WithCount tasks.
+    for (let withCountTask of eloquent.withCountColumnsAsync) {
+      let result = await withCountTask;
+      eloquent.withCountColumns.push(result.query);
+    }
+
+    return this;
+  };
+
   /**
    * Helper function that helps to merge the default bookshelf fetch
    * options parameter with the options that are built by this extension.
@@ -286,18 +386,11 @@ module.exports = function(Bookshelf, options) {
    * @param {object} options
    */
   async function mergeOptions(instance, options) {
+    await instance.runQueryBuildingTasks();
+
     let eloquent = instance.eloquent;
     let fetchOptions = eloquent.fetchOptions;
-
-    // WhereHas tasks.
-    await Promise.all(eloquent.whereHasAsync);
-
-    // WithCount tasks.
-    let withCountColumns = [];
-    for (let withCountTask of eloquent.withCountColumnsAsync) {
-      let result = await withCountTask;
-      withCountColumns.push(result.query);
-    }
+    let withCountColumns = eloquent.withCountColumns;
 
     if ('columns' in fetchOptions) {
       // Force select relation attributes that are required for the with statement.
@@ -685,12 +778,12 @@ module.exports = function(Bookshelf, options) {
     for (let model of collection.models) {
       if (!(relatedFkAttribute in model.attributes))
         throw new Error('Failed to eager load the "' + withRelationName +
-              '" relation of the "' + rd.parentTableName +
-              '" model. If you want to eager load a belongsTo ' +
-              'relation of a model then the model ' +
-              'needs to have the foreign key column selected. ' +
-              'Please add the "' + relatedFkAttribute +
-              '" column to the select statement.');
+          '" relation of the "' + rd.parentTableName +
+          '" model. If you want to eager load a belongsTo ' +
+          'relation of a model then the model ' +
+          'needs to have the foreign key column selected. ' +
+          'Please add the "' + relatedFkAttribute +
+          '" column to the select statement.');
 
       // push the model.foreignKey into the collection of ids
       if (model.attributes[relatedFkAttribute] !== null)
@@ -1102,23 +1195,13 @@ module.exports = function(Bookshelf, options) {
     return knex.raw(operatorData[0], operands).toString();
   };
 
-  /**
-   * Where statement on a related model.
-   * @param {string} relationName Relation name by which we want to filter.
-   * @param {function} [subQuery] This filter can be nested.
-   * @param {string} [operator] Filter operator.
-   * @param {numeric|string} [operand1] Filter operand1.
-   * @param {numeric|string} [operand2] Filter operand2.
-   */
-  commonExt.whereHas = function(relationName, subQuery = null,
+  function buildWhereHasCallback(Model, relationName, callback = null,
     operator = null, operand1 = null, operand2 = null) {
     // Check if the relationName is string.
     if (!isString(relationName))
       throw new Error('Must pass a string for the relation name argument.');
 
-    // Async wrapper.
-    let whereHasSubQueryTask = (async(Model, relationName, callback,
-      operator = null, operand1 = null, operand2 = null) => {
+    let whereHasCallback = async(q) => {
       // Build the withCount sub query.
       let subQuery = await withCountSubQuery(Model, Model.tableName,
         relationName, Model.tableName);
@@ -1137,73 +1220,44 @@ module.exports = function(Bookshelf, options) {
         subQuery.count('*');
 
         // compare the subquery count with the operator
-        Model.query()
-          .whereRaw('(' + subQuery.toString() + ') ' + operatorStr);
+        q.whereRaw('(' + subQuery.toString() + ') ' + operatorStr);
       } else {
         // Attach the where exists query to this model.
-        Model.query().whereExists(subQuery);
+        q.whereExists(subQuery);
       }
-    })(this, relationName, subQuery, operator, operand1, operand2);
+    };
 
-    // Push the task to the whereHas array.
-    this.eloquent.whereHasAsync.push(whereHasSubQueryTask);
-
-    // Chainable.
-    return this;
-  };
+    return whereHasCallback;
+  }
 
   /**
-   * OrWhere statement on a related model.
+   * Where statement on a related model count/existence with subQuery option.
    * @param {string} relationName Relation name by which we want to filter.
    * @param {function} [subQuery] This filter can be nested.
    * @param {string} [operator] Filter operator.
    * @param {numeric|string} [operand1] Filter operand1.
    * @param {numeric|string} [operand2] Filter operand2.
    */
-  commonExt.orWhereHas = function(relationName, subQuery = null,
-    operator = null, operand1 = null, operand2 = null) {
-    // Check if the relationName is string.
-    if (!isString(relationName))
-      throw new Error('Must pass a string for the relation name argument.');
+  function whereHasTemplate(whereName) {
+    return function(relationName, subQueryCallback = null,
+      operator = null, operand1 = null, operand2 = null) {
+      // Build the whereHas callback.
+      let whereHasCallback = buildWhereHasCallback(this, relationName,
+        subQueryCallback, operator, operand1, operand2);
+      this[whereName](whereHasCallback);
+      return this; // Chainable.
+    };
+  }
 
-    // Async wrapper.
-    let whereHasSubQueryTask = (async(Model, relationName, callback,
-      operator = null, operand1 = null, operand2 = null) => {
-      // Build the withCount sub query.
-      let subQuery = await withCountSubQuery(Model, Model.tableName,
-        relationName, Model.tableName);
-
-      // Check if the callback is a function and apply the callback.
-      if (isFunction(callback)) callback(subQuery);
-
-      // Fake sync sub query to trigger any plugins.
-      subQuery = (await subQuery.fakeSync()).query;
-
-      if (operator !== null) {
-        // compose the operator string
-        let operatorStr = composeOperator(operator, operand1, operand2);
-
-        // count the subquery
-        subQuery.count('*');
-
-        // compare the subquery count with the operator
-        Model.query()
-          .orWhereRaw('(' + subQuery.toString() + ') ' + operatorStr);
-      } else {
-        // Attach the where exists query to this model.
-        Model.query().orWhereExists(subQuery);
-      }
-    })(this, relationName, subQuery, operator, operand1, operand2);
-
-    // Push the task to the whereHas array.
-    this.eloquent.whereHasAsync.push(whereHasSubQueryTask);
-
-    // Chainable.
-    return this;
-  };
+  commonExt.whereHas = whereHasTemplate('where');
+  commonExt.andWhereHas = whereHasTemplate('andWhere');
+  commonExt.orWhereHas = whereHasTemplate('orWhere');
+  commonExt.whereNotHas = whereHasTemplate('whereNot');
+  commonExt.andWhereNotHas = whereHasTemplate('andWhereNot');
+  commonExt.orWhereNotHas = whereHasTemplate('orWhereNot');
 
   /**
-   * Where statement on a related model.
+   * Where statement on a related model count/existence.
    * @param {string} relationName Relation name by which we want to filter.
    * @param {string} [operator] Filter operator.
    * @param {numeric|string} [operand1] Filter operand1.
@@ -1230,34 +1284,23 @@ module.exports = function(Bookshelf, options) {
     return this.whereHas(relationName, null, operator, operand1, operand2);
   };
 
-  /**
-   * Where statement on a related model.
-   * @param {string} relationName Relation name by which we want to filter.
-   * @param {string} [operator] Filter operator.
-   * @param {numeric|string} [operand1] Filter operand1.
-   * @param {numeric|string} [operand2] Filter operand2.
-   */
-  commonExt.orHas = function(relationName, operator = null,
-    operand1 = null, operand2 = null) {
-    return this.orWhereHas(relationName, null, operator, operand1, operand2);
-  };
+  function hasTemplate(whereHasName) {
+    return function(relationName, operator = null,
+      operand1 = null, operand2 = null) {
+      return this[whereHasName](relationName, null,
+        operator, operand1, operand2);
+    };
+  }
+
+  commonExt.andHas = hasTemplate('andWhereHas');
+  commonExt.orHas = hasTemplate('orWhereHas');
+  commonExt.notHas = hasTemplate('whereNotHas');
+  commonExt.andNotHas = hasTemplate('andWhereNotHas');
+  commonExt.orNotHas = hasTemplate('orWhereNotHas');
 
   // ---------------------------------------------------------------------------
   // ------ Relation Helper ----------------------------------------------------
   // ---------------------------------------------------------------------------
-
-  commonExt.resetEloquent = function() {
-    // Reset eloquent state.
-    if (this.eloquent == null) {
-      this.eloquent = {};
-
-      this.eloquent.fetchOptions = {};
-      this.eloquent.withCountColumnsAsync = [];
-      this.eloquent.relationColumns = [];
-      this.eloquent.whereHasAsync = [];
-      this.eloquent.withs = {};
-    }
-  };
 
   modelExt.resetQuery = function(...args) {
     let result = modelResetQuery.apply(this, args);

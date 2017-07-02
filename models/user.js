@@ -58,4 +58,10 @@ module.exports = Bookshelf.model('User', {
   friends2: function() {
     return this.hasMany('Friend', 'user2Id');
   },
+
+  scopes: {
+    nameContains: function(qb, name) {
+      qb.whereLike('username', '%' + name + '%');
+    },
+  },
 });
