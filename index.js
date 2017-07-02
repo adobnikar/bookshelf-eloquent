@@ -16,6 +16,7 @@ const isDate = require('lodash/isDate');
 const isNumber = require('lodash/isNumber');
 const union = require('lodash/union');
 const at = require('lodash/at');
+const drop = require('lodash/drop');
 
 // Eloquent plugin -
 // Adds the functionality and function names of eloquent (like whereHas).
@@ -28,8 +29,10 @@ module.exports = function(Bookshelf, options) {
   // Source: https://bugs.mysql.com/bug.php?id=68760
   if (globalOptions.roundDateTime == null)
     globalOptions.roundDateTime = true;
+  if (globalOptions.overrideCollectionWhere == null)
+    globalOptions.overrideCollectionWhere = false;
 
-  const modelProto  = Bookshelf.Model.prototype;
+  const modelProto = Bookshelf.Model.prototype;
   const collectionProto = Bookshelf.Collection.prototype;
   const knex = Bookshelf.knex;
 
@@ -38,23 +41,24 @@ module.exports = function(Bookshelf, options) {
   const modelHas = modelProto.has;
   const modelFetch = modelProto.fetch;
   const modelFetchAll = modelProto.fetchAll;
+  const modelResetQuery = modelProto.resetQuery;
+  const collectionGet = collectionProto.get;
   const collectionAdd = collectionProto.add;
+  const collectionFetch = collectionProto.fetch;
+  const collectionFetchOne = collectionProto.fetchOne;
+  const collectionResetQuery = collectionProto.resetQuery;
 
   // Build the extension object.
+  let commonExt = {};
+
   let modelExt = {
     constructor: function() {
       modelProto.constructor.apply(this, arguments);
-      const options = arguments[1] || {};
 
-      // Add eloquent settings.
-      this.eloquent = {
-        caseSensitive: (options.caseSensitive === true),
-        fetchOptions: {},
-        withCountColumnsAsync: [],
-        relationColumns: [],
-        whereHasAsync: [],
-        withs: {},
-      };
+      this.resetEloquent();
+
+      const options = arguments[1] || {};
+      this.eloquent.caseSensitive = (options.caseSensitive === true);
     },
   };
 
@@ -62,7 +66,7 @@ module.exports = function(Bookshelf, options) {
   // ------ Fake Sync ----------------------------------------------------------
   // ---------------------------------------------------------------------------
 
-  modelExt.fakeSync = async function(options) {
+  commonExt.fakeSync = async function(options) {
     options = await mergeOptions(this, options || {});
     let sync = this.sync(options);
     options.query = sync.query;
@@ -88,7 +92,7 @@ module.exports = function(Bookshelf, options) {
     return sync;
   };
 
-  modelExt.buildQuery = async function(options) {
+  commonExt.buildQuery = async function(options) {
     options = await mergeOptions(this, options || {});
     let sync = this.sync(options);
     options.query = sync.query;
@@ -119,7 +123,7 @@ module.exports = function(Bookshelf, options) {
   // ------ Table alias --------------------------------------------------------
   // ---------------------------------------------------------------------------
 
-  modelExt.useTableAlias = function(alias) {
+  commonExt.useTableAlias = function(alias) {
     if (this.eloquent.originalTableName == null)
       this.eloquent.originalTableName = this.tableName;
     this.tableName = alias;
@@ -143,21 +147,42 @@ module.exports = function(Bookshelf, options) {
   // ------ Knex Where Methods -------------------------------------------------
   // ---------------------------------------------------------------------------
 
+  // Query where. To enable query where on collections.
+  commonExt.qWhere = function(...args) {
+    return this.query('where', ...args);
+  };
+
+  // Query where. To enable query where on collections.
+  commonExt.queryWhere = function(...args) {
+    return this.query('where', ...args);
+  };
+
+  // Query where. To enable query where on collections.
+  commonExt.basicWhere = function(...args) {
+    return this.query('where', ...args);
+  };
+
+  if (globalOptions.overrideCollectionWhere) {
+    commonExt.where = function(...args) {
+      return this.query('where', ...args);
+    };
+  }
+
   // Attach existing "knex where methods" to the model.
   const whereMethods = ['whereNot', 'whereIn', 'whereNotIn',
     'whereNull', 'whereNotNull', 'whereExists', 'whereNotExists',
   ];
   for (let method of whereMethods) {
-    modelExt[method] = function(...args) {
+    commonExt[method] = function(...args) {
       return this.query(method, ...args);
     };
   }
 
-  modelExt.whereLike = function(columnName, value) {
+  commonExt.whereLike = function(columnName, value) {
     return this.where(columnName, 'like', value);
   };
 
-  modelExt.whereNotLike = function(columnName, value) {
+  commonExt.whereNotLike = function(columnName, value) {
     return this.where(columnName, 'not like', value);
   };
 
@@ -165,23 +190,23 @@ module.exports = function(Bookshelf, options) {
   // ------ Knex AndWhere Methods ----------------------------------------------
   // ---------------------------------------------------------------------------
 
-  modelExt.andWhere = function(...args) {
+  commonExt.andWhere = function(...args) {
     return this.query('andWhere', ...args);
   };
 
   for (let method of whereMethods) {
     let andMethodName = 'and' + method.substr(0, 1).toUpperCase() +
       method.substr(1);
-    modelExt[andMethodName] = function(...args) {
+    commonExt[andMethodName] = function(...args) {
       return this.query(andMethodName, ...args);
     };
   }
 
-  modelExt.andWhereLike = function(columnName, value) {
+  commonExt.andWhereLike = function(columnName, value) {
     return this.andWhere(columnName, 'like', value);
   };
 
-  modelExt.andWhereNotLike = function(columnName, value) {
+  commonExt.andWhereNotLike = function(columnName, value) {
     return this.andWhere(columnName, 'not like', value);
   };
 
@@ -189,23 +214,23 @@ module.exports = function(Bookshelf, options) {
   // ------ Knex OrWhere Methods -----------------------------------------------
   // ---------------------------------------------------------------------------
 
-  modelExt.orWhere = function(...args) {
+  commonExt.orWhere = function(...args) {
     return this.query('orWhere', ...args);
   };
 
   for (let method of whereMethods) {
     let orMethodName = 'or' + method.substr(0, 1).toUpperCase() +
       method.substr(1);
-    modelExt[orMethodName] = function(...args) {
+    commonExt[orMethodName] = function(...args) {
       return this.query(orMethodName, ...args);
     };
   }
 
-  modelExt.orWhereLike = function(columnName, value) {
+  commonExt.orWhereLike = function(columnName, value) {
     return this.orWhere(columnName, 'like', value);
   };
 
-  modelExt.orWhereNotLike = function(columnName, value) {
+  commonExt.orWhereNotLike = function(columnName, value) {
     return this.orWhere(columnName, 'not like', value);
   };
 
@@ -216,7 +241,7 @@ module.exports = function(Bookshelf, options) {
   const whereBetweenMethods = ['whereBetween', 'whereNotBetween',
     'orWhereBetween', 'orWhereNotBetween'];
   for (let method of whereBetweenMethods) {
-    modelExt[method] = function(columnName, a, b) {
+    commonExt[method] = function(columnName, a, b) {
       if (isArray(a)) return this.query(method, columnName, a);
       else return this.query(method, columnName, [a, b]);
     };
@@ -226,19 +251,19 @@ module.exports = function(Bookshelf, options) {
   // ------ Knex Offset & Limit ------------------------------------------------
   // ---------------------------------------------------------------------------
 
-  modelExt.offset = function(...args) {
+  commonExt.offset = function(...args) {
     return this.query('offset', ...args);
   };
 
-  modelExt.limit = function(...args) {
+  commonExt.limit = function(...args) {
     return this.query('limit', ...args);
   };
 
-  modelExt.skip = function(...args) {
+  commonExt.skip = function(...args) {
     return this.query('offset', ...args);
   };
 
-  modelExt.take = function(...args) {
+  commonExt.take = function(...args) {
     return this.query('limit', ...args);
   };
 
@@ -246,7 +271,7 @@ module.exports = function(Bookshelf, options) {
   // ------ Knex orderByRaw ----------------------------------------------------
   // ---------------------------------------------------------------------------
 
-  modelExt.orderByRaw = function(...args) {
+  commonExt.orderByRaw = function(...args) {
     return this.query('orderByRaw', ...args);
   };
 
@@ -309,7 +334,7 @@ module.exports = function(Bookshelf, options) {
    * Set which columns you want to select on fetch.
    * @param {string|string[]} attrs List of attributes that you want to get from the database.
    */
-  modelExt.select = function(attrs) {
+  commonExt.select = function(attrs) {
     // If parameter attrs is not an array the wrap it into an array.
     if (!isArray(attrs)) attrs = [attrs];
 
@@ -369,7 +394,7 @@ module.exports = function(Bookshelf, options) {
   // ------ Bookshelf Paranoia Support -----------------------------------------
   // ---------------------------------------------------------------------------
 
-  modelExt.withDeleted = function() {
+  commonExt.withDeleted = function() {
     // Retrieve with soft deleted rows.
     this.eloquent.fetchOptions.withDeleted = true;
     // Chainable.
@@ -379,7 +404,7 @@ module.exports = function(Bookshelf, options) {
   /**
    * Synonym for withDeleted.
    */
-  modelExt.withTrashed = modelExt.withDeleted;
+  commonExt.withTrashed = commonExt.withDeleted;
 
   // ---------------------------------------------------------------------------
   // ------ Eager Loading ------------------------------------------------------
@@ -438,30 +463,30 @@ module.exports = function(Bookshelf, options) {
     let loadRelationTasks = [];
     for (let withRelationName in this.eloquent.withs) {
       // get the relatedData
-      let withRelation = this.eloquent.withs[withRelationName];
-      let relatedData = withRelation.relation.relatedData;
+      let relation = this.eloquent.withs[withRelationName];
+      let rd = relation.relatedData;
 
       // Check if parent ids required.
-      if ((ids === null) && ((relatedData.type === 'belongsToMany') ||
-        (relatedData.type === 'hasMany'))) {
+      if ((ids === null) && ((rd.type === 'belongsToMany') ||
+        (rd.type === 'hasMany'))) {
         // Load ids.
         ids = [];
         // extract the model id for each model
         for (let model of collection.models) {
-          if (!(this.idAttribute in model.attributes))
+          if (!(rd.parentIdAttribute in model.attributes))
             throw new Error('Failed to eager load the "' + withRelationName +
-              '" relation of the "' + this.tableName +
+              '" relation of the "' + rd.parentTableName +
               '" model. If you want to eager load a hasMany or ' +
               'belongsToMany relation of a model then the model ' +
               'needs to have it\'s id column selected.');
 
           // push the model.id into the collection of ids
-          ids.push(model.attributes[this.idAttribute]);
+          ids.push(model.attributes[rd.parentIdAttribute]);
         }
       }
 
       // Apply the relation constraint
-      switch (relatedData.type)	{
+      switch (rd.type)	{
         case 'belongsToMany':
           loadRelationTasks.push(eagerLoadBelongsToManyRelation.apply(this,
             [ids, collection, withRelationName]));
@@ -477,8 +502,8 @@ module.exports = function(Bookshelf, options) {
           break;
         default:
           throw new Error('Failed to eager load the "' + withRelationName +
-            '" relation of the "' + this.tableName +
-            '" model. Relation type ' + relatedData.type +
+            '" relation of the "' + rd.parentTableName +
+            '" model. Relation type ' + rd.type +
             ' not supported/implemented for the with statement.');
       }
     }
@@ -492,20 +517,19 @@ module.exports = function(Bookshelf, options) {
 
   async function eagerLoadBelongsToManyRelation(ids, collection,
     withRelationName) {
-    let withRelation = this.eloquent.withs[withRelationName];
-
-    // get the relation, relatedData and relatedQuery
-    let relation = withRelation.relation;
-    let relatedData = relation.relatedData;
-    let relatedQuery = withRelation.query;
+    // Get the relatedData and relation/relatedQuery.
+    let relatedQuery = this.eloquent.withs[withRelationName];
+    let rd = relatedQuery.relatedData;
+    // Remove relatedData to bypass bookshelf eager loading functionallity.
+    delete relatedQuery.relatedData;
 
     // get the columns
-    let relatedFkAttribute = relatedData.foreignKey;
-    let relatedIdAttribute = relatedQuery.idAttribute;
+    let relatedFkAttribute = rd.foreignKey;
+    let relatedIdAttribute = rd.targetIdAttribute;
 
     // build the pivot table query
-    let pivotQuery = knex.select([relatedData.foreignKey, relatedData.otherKey])
-      .from(relatedData.joinTableName).whereIn(relatedData.foreignKey, ids);
+    let pivotQuery = knex.select([rd.foreignKey, rd.otherKey])
+      .from(rd.joinTableName).whereIn(rd.foreignKey, ids);
 
     // fetch from pivot table
     let pivotRows = await pivotQuery;
@@ -514,9 +538,9 @@ module.exports = function(Bookshelf, options) {
     let foreignKeyIndex = new Map();
     let otherKeySet = new Set();
     for (let pivotRow of pivotRows) {
-      let foreignKeyValue = pivotRow[relatedData.foreignKey];
+      let foreignKeyValue = pivotRow[rd.foreignKey];
       if (foreignKeyValue === null) continue;
-      let otherKeyValue = pivotRow[relatedData.otherKey];
+      let otherKeyValue = pivotRow[rd.otherKey];
       if (otherKeyValue === null) continue;
       if (!foreignKeyIndex.has(foreignKeyValue))
         foreignKeyIndex.set(foreignKeyValue, []);
@@ -536,7 +560,7 @@ module.exports = function(Bookshelf, options) {
     for (let relatedModel of relatedModels.models) {
       if (!(relatedIdAttribute in relatedModel.attributes))
         throw new Error('Failed to eager load the "' + withRelationName +
-              '" relation of the "' + this.tableName +
+              '" relation of the "' + rd.parentTableName +
               '" model. If you want to eager load a belongsToMany ' +
               'relation of a model then the related model ' +
               'needs to have the id column selected. ' +
@@ -554,7 +578,7 @@ module.exports = function(Bookshelf, options) {
       let rById = {};
 
       let relatedIdsList = [];
-      let modelId = model.attributes[this.idAttribute];
+      let modelId = model.attributes[rd.parentIdAttribute];
       if (foreignKeyIndex.has(modelId))
         relatedIdsList = foreignKeyIndex.get(modelId);
 
@@ -570,7 +594,7 @@ module.exports = function(Bookshelf, options) {
       }
 
       // add the relation
-      let newRelation = this[withRelationName]();
+      let newRelation = this.getRelation(withRelationName);
       newRelation.models = rModels;
       newRelation._byId = rById;
       newRelation.length = rModels.length;
@@ -581,16 +605,15 @@ module.exports = function(Bookshelf, options) {
   };
 
   async function eagerLoadHasManyRelation(ids, collection, withRelationName) {
-    let withRelation = this.eloquent.withs[withRelationName];
-
-    // get the relation, relatedData and relatedQuery
-    let relation = withRelation.relation;
-    let relatedData = relation.relatedData;
-    let relatedQuery = withRelation.query;
+    // Get the relatedData and relation/relatedQuery.
+    let relatedQuery = this.eloquent.withs[withRelationName];
+    let rd = relatedQuery.relatedData;
+    // Remove relatedData to bypass bookshelf eager loading functionallity.
+    delete relatedQuery.relatedData;
 
     // get the columns
-    let relatedFkAttribute = relatedData.foreignKey;
-    let relatedIdAttribute = relatedQuery.idAttribute;
+    let relatedFkAttribute = rd.foreignKey;
+    let relatedIdAttribute = rd.targetIdAttribute;
 
     // apply the whereIn constraint to the relatedQuery
     relatedQuery.whereIn(relatedFkAttribute, ids);
@@ -603,7 +626,7 @@ module.exports = function(Bookshelf, options) {
     for (let relatedModel of relatedModels.models) {
       if (!(relatedFkAttribute in relatedModel.attributes))
         throw new Error('Failed to eager load the "' + withRelationName +
-              '" relation of the "' + this.tableName +
+              '" relation of the "' + rd.parentTableName +
               '" model. If you want to eager load a hasMany ' +
               'relation of a model then it\'s related model ' +
               'needs to have the foreign key column selected. ' +
@@ -623,7 +646,7 @@ module.exports = function(Bookshelf, options) {
       let rModels = [];
       let rById = {};
 
-      let modelId = model.attributes[this.idAttribute];
+      let modelId = model.attributes[rd.parentIdAttribute];
       if (foreignKeyIndex.has(modelId))
         rModels = foreignKeyIndex.get(modelId);
 
@@ -634,7 +657,7 @@ module.exports = function(Bookshelf, options) {
       }
 
       // add the relation
-      let newRelation = this[withRelationName]();
+      let newRelation = this.getRelation(withRelationName);
       newRelation.models = rModels;
       newRelation._byId = rById;
       newRelation.length = rModels.length;
@@ -645,16 +668,15 @@ module.exports = function(Bookshelf, options) {
   };
 
   async function eagerLoadBelongsToRelation(collection, withRelationName) {
-    let withRelation = this.eloquent.withs[withRelationName];
-
-    // get the relation, relatedData and relatedQuery
-    let relation = withRelation.relation;
-    let relatedData = relation.relatedData;
-    let relatedQuery = withRelation.query;
+    // Get the relatedData and relation/relatedQuery.
+    let relatedQuery = this.eloquent.withs[withRelationName];
+    let rd = relatedQuery.relatedData;
+    // Remove relatedData to bypass bookshelf eager loading functionallity.
+    delete relatedQuery.relatedData;
 
     // get the columns
-    let relatedFkAttribute = relatedData.foreignKey;
-    let relatedIdAttribute = relatedQuery.idAttribute;
+    let relatedFkAttribute = rd.foreignKey;
+    let relatedIdAttribute = rd.targetIdAttribute;
 
     // build the fk ids array
     let fkIds = new Set();
@@ -663,7 +685,7 @@ module.exports = function(Bookshelf, options) {
     for (let model of collection.models) {
       if (!(relatedFkAttribute in model.attributes))
         throw new Error('Failed to eager load the "' + withRelationName +
-              '" relation of the "' + this.tableName +
+              '" relation of the "' + rd.parentTableName +
               '" model. If you want to eager load a belongsTo ' +
               'relation of a model then the model ' +
               'needs to have the foreign key column selected. ' +
@@ -698,7 +720,7 @@ module.exports = function(Bookshelf, options) {
     // attach the relatedModels to the model(s)
     for (let model of collection.models) {
       // add/create the relation
-      let newRelation = this[withRelationName]();
+      let newRelation = this.getRelation(withRelationName);
 
       // set the relation to be null by default
       model.attributes[withRelationName] = null;
@@ -710,16 +732,17 @@ module.exports = function(Bookshelf, options) {
       let relatedModel = relatedModelIndex.get(relatedId);
 
       // copy over all own properties
+      // TODO: this is a quick fix - find a better solution how to create relation from model
       let copyProperties = new Set([
-        "attributes",
-        "_previousAttributes",
-        "changed",
-        "relations",
-        "cid",
-        "id",
-        "_events",
-        "_eventsCount",
-        "eloquent",
+        'attributes',
+        '_previousAttributes',
+        'changed',
+        'relations',
+        'cid',
+        'id',
+        '_events',
+        '_eventsCount',
+        'eloquent',
       ]);
       for (var property in relatedModel) {
         if (!relatedModel.hasOwnProperty(property)) continue;
@@ -772,7 +795,7 @@ module.exports = function(Bookshelf, options) {
    * Can also be a single relations name or an array of relation names.
    * @param {function} [signleRelationSubquery] Only takes effect if the "relationNames" is a single relation name (string).
    */
-  modelExt.with = function(relationNames, signleRelationSubquery = null) {
+  commonExt.with = function(relationNames, signleRelationSubquery = null) {
     // Validate arguments.
     // withRelated is an object where keys are relation names and values are callback functions or null
     let withRelated = formatWiths(relationNames, signleRelationSubquery);
@@ -795,15 +818,8 @@ module.exports = function(Bookshelf, options) {
       // Pick the first relation name.
       let firstRelationName = tokens[0];
 
-      // Check if the relation exists.
-      if (!(firstRelationName in this))
-        // TODO: make this error find the model name from the bookshelf registry plugin (instead of the tableName)
-        throw new Error('Relation ' + firstRelationName +
-          ' does not exist on this model (tableName = ' +
-          knex.raw('??', [this.tableName]).toString() + ').');
-
-      // Get the relation data.
-      let relation = this[firstRelationName]();
+      // Get the relation and relationData.
+      let relation = this.getRelation(firstRelationName).toModel();
       let relatedData = relation.relatedData;
 
       // Check if this relation already exists in the withs => if not then create a new related query.
@@ -816,18 +832,12 @@ module.exports = function(Bookshelf, options) {
           throw new Error('Relation type ' + relatedData.type +
             ' not supported/implemented for the with statement.');
 
-        // Forge the related model/query.
-        let relatedModel = relatedData.target.forge();
-
         // Add this relation to the withs.
-        this.eloquent.withs[firstRelationName] = {
-          query: relatedModel,
-          relation: relation,
-        };
+        this.eloquent.withs[firstRelationName] = relation;
       }
 
       // Get the related query.
-      let relatedQuery = this.eloquent.withs[firstRelationName].query;
+      let relatedQuery = this.eloquent.withs[firstRelationName];
 
       // Get the callback.
       let callback = withRelated[relationName];
@@ -857,7 +867,7 @@ module.exports = function(Bookshelf, options) {
    * @param {string|string[]} attrs List of attributes on the related model that we want to get from database.
    * @param {function} [subquery] Optional nested query callback.
    */
-  modelExt.withSelect = function(relationName, attrs, subquery = null) {
+  commonExt.withSelect = function(relationName, attrs, subquery = null) {
     // Validate arguments.
     if (!isString(relationName))
       throw new Error('Must pass a string for the relation name argument.');
@@ -965,7 +975,7 @@ module.exports = function(Bookshelf, options) {
    * Can also be a single relations name or an array of relation names.
    * @param {function} [signleRelationSubquery] If the "relationNames" parameter is a string you can pass the callback to this parameter.
    */
-  modelExt.withCount = function(relationNames, signleRelationSubquery = null) {
+  commonExt.withCount = function(relationNames, signleRelationSubquery = null) {
     // Validate arguments.
     // withRelated is an object where keys are relation names and values are callback functions or null
     let withRelated = formatWiths(relationNames, signleRelationSubquery);
@@ -1103,7 +1113,7 @@ module.exports = function(Bookshelf, options) {
    * @param {numeric|string} [operand1] Filter operand1.
    * @param {numeric|string} [operand2] Filter operand2.
    */
-  modelExt.whereHas = function(relationName, subQuery = null,
+  commonExt.whereHas = function(relationName, subQuery = null,
     operator = null, operand1 = null, operand2 = null) {
     // Check if the relationName is string.
     if (!isString(relationName))
@@ -1153,7 +1163,7 @@ module.exports = function(Bookshelf, options) {
    * @param {numeric|string} [operand1] Filter operand1.
    * @param {numeric|string} [operand2] Filter operand2.
    */
-  modelExt.orWhereHas = function(relationName, subQuery = null,
+  commonExt.orWhereHas = function(relationName, subQuery = null,
     operator = null, operand1 = null, operand2 = null) {
     // Check if the relationName is string.
     if (!isString(relationName))
@@ -1202,7 +1212,7 @@ module.exports = function(Bookshelf, options) {
    * @param {numeric|string} [operand1] Filter operand1.
    * @param {numeric|string} [operand2] Filter operand2.
    */
-  modelExt.has = function(relationName, operator = null,
+  commonExt.has = function(relationName, operator = null,
     operand1 = null, operand2 = null) {
     if (isString(relationName)) {
       // Check if the relation exists on this model.
@@ -1230,9 +1240,60 @@ module.exports = function(Bookshelf, options) {
    * @param {numeric|string} [operand1] Filter operand1.
    * @param {numeric|string} [operand2] Filter operand2.
    */
-  modelExt.orHas = function(relationName, operator = null,
+  commonExt.orHas = function(relationName, operator = null,
     operand1 = null, operand2 = null) {
     return this.orWhereHas(relationName, null, operator, operand1, operand2);
+  };
+
+  // ---------------------------------------------------------------------------
+  // ------ Relation Helper ----------------------------------------------------
+  // ---------------------------------------------------------------------------
+
+  commonExt.resetEloquent = function() {
+    // Reset eloquent state.
+    if (this.eloquent == null) {
+      this.eloquent = {};
+
+      this.eloquent.fetchOptions = {};
+      this.eloquent.withCountColumnsAsync = [];
+      this.eloquent.relationColumns = [];
+      this.eloquent.whereHasAsync = [];
+      this.eloquent.withs = {};
+    }
+  };
+
+  modelExt.resetQuery = function(...args) {
+    let result = modelResetQuery.apply(this, args);
+    // Reset this extension.
+    this.resetEloquent();
+    return result;
+  };
+
+  modelExt.toModel = function() {
+    return this;
+  };
+
+  modelExt.tryGetRelation = function(relationName) {
+    let relationCandidate = this[relationName];
+    if (!isFunction(relationCandidate)) return null;
+    let relation = relationCandidate.apply(this);
+    return relation;
+  };
+
+  modelExt.getRelation = function(relationName) {
+    let relation = this.tryGetRelation(relationName);
+    if (relation != null) return relation;
+    throw new Error('Relation ' + relationName +
+      ' does not exist on this model (tableName = ' +
+      knex.raw('??', [this.tableName]).toString() + ').');
+  };
+
+  modelExt.isModel = function() {
+    return true;
+  };
+
+  modelExt.isCollection = function() {
+    return false;
   };
 
   // ---------------------------------------------------------------------------
@@ -1244,6 +1305,13 @@ module.exports = function(Bookshelf, options) {
   for (let method in modelExt) {
     if (!modelExt.hasOwnProperty(method)) continue;
     if (method === 'delete') continue;
+    staticModelExt[method] = function(...args) {
+      return this.forge()[method](...args);
+    };
+  }
+
+  for (let method in commonExt) {
+    if (!commonExt.hasOwnProperty(method)) continue;
     staticModelExt[method] = function(...args) {
       return this.forge()[method](...args);
     };
@@ -1392,6 +1460,7 @@ module.exports = function(Bookshelf, options) {
   };
 
   // Extend the model.
+  Bookshelf.Model = Bookshelf.Model.extend(commonExt);
   Bookshelf.Model = Bookshelf.Model.extend(modelExt, staticModelExt);
 
   // ---------------------------------------------------------------------------
@@ -1423,36 +1492,80 @@ module.exports = function(Bookshelf, options) {
   let collectionExt = {
     constructor: function() {
       collectionProto.constructor.apply(this, arguments);
-      const options = arguments[1] || {};
 
-      // Add eloquent settings.
-      this.eloquent = {
-        caseSensitive: (options.caseSensitive === true),
-        // memoAdd functions
-        collectionAddMemo: memo(collectionEloquentAdd, {
-          normalizer: function(args) {
-            // "args" is arguments object as accessible in memoized function.
-            // NOTE: If the database collation is case insensitive then it is good to use toLowerCase().
-            let data = args[0];
-            let options = args[1] || {};
-            if (options.unique != null)
-              data = pick(data, options.unique);
-            return JSON.stringify(data).toLowerCase();
-          },
-        }),
-        collectionAddMemoCaseSensitive: memo(collectionEloquentAdd, {
-          normalizer: function(args) {
-            // "args" is arguments object as accessible in memoized function.
-            // NOTE: If the database collation is case insensitive then it is good to use toLowerCase().
-            let data = args[0];
-            let options = args[1] || {};
-            if (options.unique != null)
-              data = pick(data, options.unique);
-            return JSON.stringify(args[0]);
-          },
-        }),
-      };
+      this.resetEloquent();
+
+      const options = arguments[1] || {};
+      this.eloquent.caseSensitive = (options.caseSensitive === true);
+
+      this.eloquent.collectionAddMemo = memo(collectionEloquentAdd, {
+        normalizer: function(args) {
+          // "args" is arguments object as accessible in memoized function.
+          // NOTE: If the database collation is case insensitive then it is good to use toLowerCase().
+          let data = args[0];
+          let options = args[1] || {};
+          if (options.unique != null)
+            data = pick(data, options.unique);
+          return JSON.stringify(data).toLowerCase();
+        },
+      });
+
+      this.eloquent.collectionAddMemoCaseSensitive =
+      memo(collectionEloquentAdd, {
+        normalizer: function(args) {
+          // "args" is arguments object as accessible in memoized function.
+          // NOTE: If the database collation is case insensitive then it is good to use toLowerCase().
+          let data = args[0];
+          let options = args[1] || {};
+          if (options.unique != null)
+            data = pick(data, options.unique);
+          return JSON.stringify(args[0]);
+        },
+      });
     },
+  };
+
+  /**
+   * Look at the bookshelf documentation.
+   */
+  collectionExt.fetchOne = async function fetchOne(options) {
+    // Attach options that were built by eloquent/this extension.
+    options = await mergeOptions(this, options);
+
+    // Call the original fetchOne function with eager load wrapper.
+    return await fetchWithEagerLoad.apply(this, [collectionFetchOne, options]);
+  };
+
+  /**
+   * Synonym for fetchOne.
+   */
+  collectionExt.first = collectionExt.fetchOne;
+
+  /**
+   * Synonym for fetch.
+   * This one is a little bit tricky. Now it is also a synonym for fetchAll.
+   * In eloquent function get() is similar to fetchAll() in bookshelf.
+   * If the first parameter is a string we want to call the bookshelf get() function which gets an attribute.
+   * Else we want to call the eloquent get() function which gets all result that match the built query.
+   */
+  collectionExt.get = function(...args) {
+    // Get a model from a collection, specified by an id, a cid, or by passing in a model.
+    if (args.length < 1) return this.fetch(...args);
+    let obj = args[0];
+    if ((obj == null) || isString(obj) || isNumber(obj) ||
+      ('id' in obj) || ('cid' in obj)) return collectionGet.apply(this, args);
+    return this.fetch(...args);
+  };
+
+  /**
+   * Look at the bookshelf documentation.
+   */
+  collectionExt.fetch = async function fetch(options) {
+    // Attach options that were built by eloquent/this extension.
+    options = await mergeOptions(this, options);
+
+    // Call the original fetchAll function with eager load wrapper.
+    return await fetchWithEagerLoad.apply(this, [collectionFetch, options]);
   };
 
   // ---------------------------------------------------------------------------
@@ -1611,7 +1724,7 @@ module.exports = function(Bookshelf, options) {
       tz = tz || 'local';
       if (tz.trim() !== 'local') {
         let tokens = value.split(' ');
-        tokens = tokens.filter((v) => { return (v.length > 0); })
+        tokens = tokens.filter((v) => { return (v.length > 0); });
         if (tokens.length < 2)
           value += ' 00:00:00';
         value = value + ' ' + tz;
@@ -1873,5 +1986,51 @@ module.exports = function(Bookshelf, options) {
     return this;
   };
 
+  // ---------------------------------------------------------------------------
+  // ------ Relation Helper ----------------------------------------------------
+  // ---------------------------------------------------------------------------
+
+  collectionExt.resetQuery = function(...args) {
+    let result = collectionResetQuery.apply(this, args);
+    // Reset this extension.
+    this.resetEloquent();
+    return result;
+  };
+
+  collectionExt.toModel = function() {
+    let model = new this.model();
+    model._knex = this.query().clone();
+    model.eloquent = this.eloquent;
+    this.resetQuery();
+    if (this.relatedData) model.relatedData = this.relatedData;
+    return model;
+  };
+
+  collectionExt.tryGetRelation = function(relationName) {
+    let modelProto = new this.model;
+    if (modelProto == null) return null;
+    let relationCandidate = modelProto[relationName];
+    if (!isFunction(relationCandidate)) return null;
+    let relation = relationCandidate.apply(modelProto);
+    return relation;
+  };
+
+  collectionExt.getRelation = function(relationName) {
+    let relation = this.tryGetRelation(relationName);
+    if (relation != null) return relation;
+    throw new Error('Relation ' + relationName +
+      ' does not exist on this model (tableName = ' +
+      knex.raw('??', [this.tableName()]).toString() + ').');
+  };
+
+  collectionExt.isModel = function() {
+    return false;
+  };
+
+  collectionExt.isCollection = function() {
+    return true;
+  };
+
+  Bookshelf.Collection = Bookshelf.Collection.extend(commonExt);
   Bookshelf.Collection = Bookshelf.Collection.extend(collectionExt);
 };
