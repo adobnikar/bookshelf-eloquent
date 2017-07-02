@@ -916,15 +916,12 @@ module.exports = function(Bookshelf, options) {
     let subPath = tokens.join('.');
 
     // Get the relation data.
-    let relation = Model[firstRelationName]();
-    let relatedData = relation.relatedData;
-
-    // Forge the related/sub model/query.
-    let subModel = relatedData.target.forge();
-    let bookQuery = subModel;
+    let relation = Model.getRelation(firstRelationName).toModel();
+    let rd = relation.relatedData;
+    let bookQuery = relation;
 
     // Apply the relation constraint.
-    switch (relatedData.type)	{
+    switch (rd.type)	{
       case 'belongsToMany':
         // HasMany part.
         if (isString(subquery))
@@ -932,30 +929,30 @@ module.exports = function(Bookshelf, options) {
         else subquery = subquery.select(Model.idAttribute);
 
         // Pivot table part.
-        subquery = knex.select(relatedData.otherKey)
-          .from(relatedData.joinTableName)
-          .whereIn(relatedData.foreignKey, subquery);
+        subquery = knex.select(rd.otherKey)
+          .from(rd.joinTableName)
+          .whereIn(rd.foreignKey, subquery);
 
         // BelongsTo part.
-        bookQuery.whereIn(subModel.idAttribute, subquery);
+        bookQuery.whereIn(rd.targetIdAttribute, subquery);
         break;
       case 'hasMany':
         if (isString(subquery))
           subquery = knex.raw('(??.??)', [subquery, Model.idAttribute]);
         else subquery = subquery.select(Model.idAttribute);
-        bookQuery.whereIn(relatedData.foreignKey, subquery);
+        bookQuery.whereIn(rd.foreignKey, subquery);
         break;
       case 'belongsTo':
       case 'hasOne':
         if (isString(subquery))
-          subquery = knex.raw('??.??', [subquery, relatedData.foreignKey]);
-        else subquery = subquery.select(relatedData.foreignKey);
-        bookQuery.whereIn(subModel.idAttribute, subquery);
+          subquery = knex.raw('??.??', [subquery, rd.foreignKey]);
+        else subquery = subquery.select(rd.foreignKey);
+        bookQuery.whereIn(rd.targetIdAttribute, subquery);
         break;
       default:
         throw new Error('Failed to eager load the "' + firstRelationName +
           '" relation of the "' + Model.tableName +
-          '" model. Relation type ' + relatedData.type +
+          '" model. Relation type ' + rd.type +
           ' not supported/implemented for the withCount statement.');
     }
 
@@ -966,7 +963,7 @@ module.exports = function(Bookshelf, options) {
     if (tokens.length < 1) return bookQuery;
     else {
       let syncSubquery = (await bookQuery.fakeSync()).query;
-      return withCountSubQuery(subModel, syncSubquery, subPath, baseTableName);
+      return withCountSubQuery(relation, syncSubquery, subPath, baseTableName);
     }
   }
 
