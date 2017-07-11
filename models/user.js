@@ -61,7 +61,13 @@ module.exports = Bookshelf.model('User', {
 
   scopes: {
     nameContains: function(qb, name) {
-      qb.whereLike('username', '%' + name + '%');
+      qb.be.whereLike('username', '%' + name + '%');
+    },
+
+    whereAdmin: function(qb) {
+      qb.be.whereHas('roles', (sq) => {
+        sq.where('name', 'admin');
+      });
     },
   },
 });

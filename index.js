@@ -55,11 +55,15 @@ module.exports = function(Bookshelf, options) {
   const modelHas = modelProto.has;
   const modelFetch = modelProto.fetch;
   const modelFetchAll = modelProto.fetchAll;
+  const modelQuery = modelProto.query;
+  const modelKnexBuilder = modelProto._builder;
   const modelResetQuery = modelProto.resetQuery;
   const collectionGet = collectionProto.get;
   const collectionAdd = collectionProto.add;
   const collectionFetch = collectionProto.fetch;
   const collectionFetchOne = collectionProto.fetchOne;
+  const collectionQuery = collectionProto.query;
+  const collectionKnexBuilder = collectionProto._builder;
   const collectionResetQuery = collectionProto.resetQuery;
 
   // Build the extension object.
@@ -89,6 +93,8 @@ module.exports = function(Bookshelf, options) {
       this.eloquent.withCountColumns = [];
       this.eloquent.relationColumns = [];
       this.eloquent.withs = {};
+      this.eloquent.knex = knex;
+      this.eloquent.bookshelf = Bookshelf;
     }
   };
 
@@ -264,11 +270,11 @@ module.exports = function(Bookshelf, options) {
   }
 
   commonExt.whereLike = function(columnName, value) {
-    return this.where(columnName, 'like', value);
+    return this.query('where', columnName, 'like', value);
   };
 
   commonExt.whereNotLike = function(columnName, value) {
-    return this.where(columnName, 'not like', value);
+    return this.query('where', columnName, 'not like', value);
   };
 
   // ---------------------------------------------------------------------------
@@ -1499,6 +1505,30 @@ module.exports = function(Bookshelf, options) {
       });
   };
 
+  // Extend model knex query builder.
+  modelExt._builder = function beBuilder(...args) {
+    let result = modelKnexBuilder.apply(this, args);
+
+    // Append bookshelf eloquent instance to the knex query builder.
+    result.be = this;
+
+    return result;
+  };
+
+  // Extend model query fn.
+  modelExt.query = function beQuery(...args) {
+    // Ensure the object has a query builder.
+    if (!this._knex) {
+      let tableName = result(this, 'tableName');
+      this._knex = this._builder(tableName);
+    }
+
+    // Append bookshelf eloquent instance to the knex query builder.
+    this._knex.be = this;
+
+    return modelQuery.apply(this, args);
+  };
+
   // Extend the model.
   Bookshelf.Model = Bookshelf.Model.extend(commonExt);
   Bookshelf.Model = Bookshelf.Model.extend(modelExt, staticModelExt);
@@ -1930,7 +1960,7 @@ module.exports = function(Bookshelf, options) {
 
       // add the model to the index
       if (index.has(uniqHash))
-        throw new Error('This collection has models duplicate unique keys. ' +
+        throw new Error('This collection has models with duplicate unique keys. ' +
           'SelectBy cannot be performed.');
       index.set(uniqHash, model);
     }
@@ -2069,6 +2099,30 @@ module.exports = function(Bookshelf, options) {
 
   collectionExt.isCollection = function() {
     return true;
+  };
+
+  // Extend collection knex query builder.
+  collectionExt._builder = function beBuilder(...args) {
+    let result = collectionKnexBuilder.apply(this, args);
+
+    // Append bookshelf eloquent instance to the knex query builder.
+    result.be = this;
+
+    return result;
+  };
+
+  // Extend collection query fn.
+  collectionExt.query = function beQuery(...args) {
+    // Ensure the object has a query builder.
+    if (!this._knex) {
+      let tableName = result(this, 'tableName');
+      this._knex = this._builder(tableName);
+    }
+
+    // Append bookshelf eloquent instance to the knex query builder.
+    this._knex.be = this;
+
+    return collectionQuery.apply(this, args);
   };
 
   Bookshelf.Collection = Bookshelf.Collection.extend(commonExt);

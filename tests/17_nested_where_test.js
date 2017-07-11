@@ -49,4 +49,23 @@ exports.test = async function() {
     q.whereLike('firstName', '%Admin');
   }).get()).toJSON();
   assert.deepStrictEqual(users, usersCmp);
+
+  // Issue example.
+  /*let townId = 1;
+  let id = 5;
+  let Product_price = {};
+
+  Product_price.where((query) => {
+    query.whereHas('priceShop', (q) => {
+      q.where('town_id', townId);
+    }).orWhereHas('priceShopNet', (q) => {
+      q.where('town_id', townId);
+    }).orWhereHas('priceShopNet.shops', (q) => {
+      q.where('town_id', townId);
+    });
+  }).with(['priceEdizm', 'priceShop', 'promotions_type', 'promotions'])
+    .where('products_id', id)
+    .get();
+
+  */
 };

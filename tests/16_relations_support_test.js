@@ -12,6 +12,7 @@ exports.test = async function() {
     user.groups = user.mgroups;
     delete user.mgroups;
   }
+
   let usersCmp = await User.with('groups', (q) => {
     q.nameContains('math');
   }).get();
@@ -21,3 +22,12 @@ exports.test = async function() {
   // TODO: maybe add some more tests.
   // tests for all different relation types.
 };
+
+// Test only this file.
+/*(async() => {
+  //await exports.setUp();
+  await exports.test();
+  //await exports.tearDown();
+})().catch((error) => {
+  console.error(error);
+});*/

@@ -170,3 +170,13 @@ exports.test = async function() {
     .toJSON().map(removeProto);
   assert.deepStrictEqual(bookResult, knexResult);
 };
+
+
+/*(async() => {
+  //await exports.setUp();
+  await exports.test();
+  //await exports.tearDown();
+})().catch((error) => {
+  console.error(error);
+});
+*/

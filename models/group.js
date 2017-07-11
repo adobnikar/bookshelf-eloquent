@@ -39,7 +39,8 @@ module.exports = Bookshelf.model('Group', {
       qb.where({status: 'Active'});
     },
     nameContains: function(qb, name) {
-      qb.where(Knex.raw('name LIKE ?', '%' + name + '%'));
+      //qb.where(Knex.raw('name LIKE ?', '%' + name + '%'));
+      qb.be.whereLike('name', '%' + name + '%');
     },
     filterOwner: function(qb, id) {
       qb.where('ownerId', id);
