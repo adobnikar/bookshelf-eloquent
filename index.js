@@ -55,6 +55,7 @@ module.exports = function(Bookshelf, options) {
   const modelHas = modelProto.has;
   const modelFetch = modelProto.fetch;
   const modelFetchAll = modelProto.fetchAll;
+  const modelCount = modelProto.count;
   const modelQuery = modelProto.query;
   const modelKnexBuilder = modelProto._builder;
   const modelResetQuery = modelProto.resetQuery;
@@ -62,6 +63,7 @@ module.exports = function(Bookshelf, options) {
   const collectionAdd = collectionProto.add;
   const collectionFetch = collectionProto.fetch;
   const collectionFetchOne = collectionProto.fetchOne;
+  const collectionCount = collectionProto.count;
   const collectionQuery = collectionProto.query;
   const collectionKnexBuilder = collectionProto._builder;
   const collectionResetQuery = collectionProto.resetQuery;
@@ -487,6 +489,19 @@ module.exports = function(Bookshelf, options) {
 
     // Call the original fetchAll function with eager load wrapper.
     return await fetchWithEagerLoad.apply(this, [modelFetchAll, options]);
+  };
+
+  /**
+   * Look at the bookshelf documentation.
+   */
+  modelExt.count = async function(...args) {
+    // Attach options that were built by eloquent/this extension.
+    let options = {};
+    if (args.length >= 2) options = args[1];
+    options = await mergeOptions(this, options);
+
+    // Call the original fetchAll function with eager load wrapper.
+    return await modelCount.apply(this, args);
   };
 
   // ---------------------------------------------------------------------------
