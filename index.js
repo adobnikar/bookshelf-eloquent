@@ -56,6 +56,7 @@ module.exports = function(Bookshelf, options) {
   const modelFetch = modelProto.fetch;
   const modelFetchAll = modelProto.fetchAll;
   const modelCount = modelProto.count;
+  const modelDestroy = modelProto.destroy;
   const modelQuery = modelProto.query;
   const modelKnexBuilder = modelProto._builder;
   const modelResetQuery = modelProto.resetQuery;
@@ -446,6 +447,20 @@ module.exports = function(Bookshelf, options) {
   };
 
   /**
+   * Look at the bookshelf documentation.
+   */
+  modelExt.destroy = async function(...args) {
+    // Attach options that were built by eloquent/this extension.
+    let options = {};
+    if (args.length >= 1) options = args[0];
+    options = await mergeOptions(this, options);
+    args[0] = options;
+
+    // Call the original fetchAll function with eager load wrapper.
+    return await modelDestroy.apply(this, args);
+  };
+
+  /**
    * Synonym for destroy.
    */
   modelExt.delete = function(...args) {
@@ -499,6 +514,7 @@ module.exports = function(Bookshelf, options) {
     let options = {};
     if (args.length >= 2) options = args[1];
     options = await mergeOptions(this, options);
+    args[1] = options;
 
     // Call the original fetchAll function with eager load wrapper.
     return await modelCount.apply(this, args);
