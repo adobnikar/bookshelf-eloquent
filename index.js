@@ -1713,6 +1713,7 @@ module.exports = function(Bookshelf, options) {
   // ---------------------------------------------------------------------------
 
   /**
+   * NOTE: ! This function is similar to replace. When changing also check the replace function. !
    * Bulk insert. Inserts all the models in the collection to the database.
    * By setting the ignoreDuplicates parameter to true you skip inserting the rows with a duplicate uniq key.
    * TODO: maybe add the option for batch processing (it could happen that queries get too long when inserting lots of models)
@@ -1774,6 +1775,54 @@ module.exports = function(Bookshelf, options) {
             }
           }
         }
+      })
+      .return(this);
+  };
+
+  /**
+   * NOTE: ! This function is similar to insert. When changing also check the insert function. !
+   * Bulk replace. Replaces all the models in the collection (rows in the database) where the unique key matches.
+   * TODO: maybe add the option for batch processing (it could happen that queries get too long when inserting lots of models)
+   */
+  collectionExt.replace = function(ignoreDuplicates = false) {
+    // Check if any model to insert at all.
+    if (this.models.length <= 0)
+      return Promise.all([]);
+
+    // Build the knex query.
+    let idAttribute = this.idAttribute();
+    let data = this.models.map(function(model) { return model.attributes; });
+    let knexQuery = knex.insert(data)
+      .into(this.tableName()).returning(idAttribute);
+
+    // Hack the toSQL function.
+    // Change the SQL statement before it gets executed.
+    knexQuery._toSQLHack = knexQuery.toSQL;
+    knexQuery.toSQL = function(...args) {
+      // call the original toSQL function
+      let sqlQuery = knexQuery._toSQLHack(...args);
+
+      // check if this SQL query begins with an "insert"
+      let sqlBegin = sqlQuery.sql.substring(0, 6).toLowerCase();
+      if (sqlBegin !== 'insert')
+        throw new Error('This SQL statement cannot be changed ' +
+          'to a replace statement. ("' + sqlQuery.sql + '")');
+
+      // modify the SQL query - change the word "insert" into "replace"
+      sqlQuery.sql = 'replace' + sqlQuery.sql.substr(6);
+
+      // return the modified SQL query
+      return sqlQuery;
+    };
+
+    // Execute the bulk insert.
+    return knexQuery
+      .returning(idAttribute)
+      .bind(this)
+      .map(function(id, index) {
+        // TODO: create a fallback or improvements for other databases (example: PostgreSQL)
+        // NOTE: Some rows get inserted, some get replaced.
+        // There is no way to compute the primary (auto increment) keys of the inserted rows.
       })
       .return(this);
   };

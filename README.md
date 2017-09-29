@@ -49,6 +49,7 @@ bookshelf.plugin(require('bookshelf-eloquent'));
 - **.withSelect(relationName, columns, [subquery])** → Bookshelf  model (this) / function is chainable
 - **.withCount(withRelated, [signleRelationSubquery])** → Bookshelf  model (this) / function is chainable
 - **.has(relationName, [operator], [operand1], [operand2]) / .orHas** → Bookshelf  model (this) / function is chainable
+- **.where(\~mixed\~) / .orWhere** → Bookshelf  model (this) / function is chainable (nested where support)
 - **.whereHas(relationName, [subquery], [operator], [operand1], [operand2]) / .orWhereHas** → Bookshelf  model (this) / function is chainable
 - **.destroyAll([options]) / .deleteAll** → Promise\<Bookshelf Model\>
 - **.withDeleted() / .withTrashed** → Bookshelf model (this) / function is chainable
@@ -62,6 +63,7 @@ bookshelf.plugin(require('bookshelf-eloquent'));
 - **.addMemo(data, [options])** → Bookshelf model | Bookshelf collection (this) / function is chainable
 - **.insert([ignoreDuplicates = false])** → Promise\<Bookshelf collection\> (Promise\<this\>)
 - **.insertBy(uniqueColumns, [selectColumns])** → Promise\<Bookshelf collection\> (Promise\<this\>)
+- **.replace()** → Promise\<Bookshelf collection\> (Promise\<this\>)
 
 ## Get, First and Select functions
 
@@ -309,6 +311,25 @@ const Account = require('../models/account');
     SQL:
     ```sql
     select * from `users` where `votes` between 1 and 100
+    ```
+- Nested where example:
+
+    Get (select) all users that have at least 100 votes and have at least one post or comment.
+
+    Filter logic: (votes > 100) and ((at least one comment) or (at least one post)).
+
+    ```javascript
+    var users = await User.where((subQuery) => {
+        subQuery.where('votes', '>', 100);
+        subQuery.where((subSubQuery) => {
+            subSubQuery.whereHas('comments');
+            subSubQuery.orWhereHas('posts');
+        });
+    }).get();
+    ```
+    SQL:
+    ```sql
+    select `users`.* from `users` where (`votes` > 100 and ((exists (select * from `comments` where `createdById` in (`users`.`id`))) or (exists (select * from `posts` where `createdById` in (`users`.`id`)))))
     ```
 
 ## Other Knex functions
@@ -880,3 +901,30 @@ If you need even more power, you may use the `whereHas` and `orWhereHas` methods
         { name: 'Timmy Windler', number: 2, id: 3 }
     ]
     ```
+
+- **.replace()** → Promise\<Bookshelf collection\> (Promise\<this\>)
+
+    This function compiles the sql insert statment and then replaces the word "insert" with "replace".
+
+    **Examples**
+
+    Require the user model.
+    ```javascript
+    const User = require('../models/user');
+    ```
+    - Bulk replace 3 users in the database.
+        ```javascript
+        // Create a Bookshelf collection.
+        var userCollection = User.collection();
+
+        // Add the users to the collection.
+        // NOTE: Primary or unique keys should be given when using the replace statement.
+        userCollection.add([
+          {id: 1, name: 'Geovanny Waelchi Jr.', number: 81},
+          {id: 2, name: 'Christ Green', number: 35},
+          {id: 3, name: 'Timmy Windler', number: 2},
+        ]);
+
+        // Run the bulk replace sql statement.
+        await userCollection.replace();
+        ```
