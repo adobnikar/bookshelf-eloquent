@@ -509,12 +509,14 @@ module.exports = function(Bookshelf, options) {
   /**
    * Look at the bookshelf documentation.
    */
-  modelExt.count = async function(...args) {
+  modelExt.count = async function(column, options) {
+    let args = [];
+    if (!isString(column)) options = column;
+    else args.push(column);
+
     // Attach options that were built by eloquent/this extension.
-    let options = {};
-    if (args.length >= 2) options = args[1];
     options = await mergeOptions(this, options);
-    args[1] = options;
+    args.push(options);
 
     // Call the original fetchAll function with eager load wrapper.
     return await modelCount.apply(this, args);
@@ -1667,6 +1669,22 @@ module.exports = function(Bookshelf, options) {
 
     // Call the original fetchAll function with eager load wrapper.
     return await fetchWithEagerLoad.apply(this, [collectionFetch, options]);
+  };
+
+  /**
+   * Look at the bookshelf documentation.
+   */
+  collectionExt.count = async function(column, options) {
+    let args = [];
+    if (!isString(column)) options = column;
+    else args.push(column);
+
+    // Attach options that were built by eloquent/this extension.
+    options = await mergeOptions(this, options);
+    args.push(options);
+
+    // Call the original fetchAll function with eager load wrapper.
+    return await collectionCount.apply(this, args);
   };
 
   // ---------------------------------------------------------------------------
