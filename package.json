@@ -44,7 +44,6 @@
   "homepage": "https://github.com/adobnikar/bookshelf-eloquent#readme",
   "devDependencies": {
     "bcrypt": "^1.0.2",
-    "bookshelf": "^0.10.3",
     "bookshelf-paranoia": "^0.11.0",
     "bookshelf-scopes": "^1.5.0",
     "dotenv": "^4.0.0",
@@ -54,6 +53,7 @@
     "seedrandom": "^2.4.3"
   },
   "dependencies": {
+    "bookshelf": "^0.10.4",
     "lodash": "^4.17.4",
     "memoizee": "^0.4.4",
     "xtend": "^4.0.1"
