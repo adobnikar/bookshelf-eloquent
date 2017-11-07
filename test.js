@@ -1,8 +1,8 @@
 'use strict';
 
-var fs = require('fs');
-var path = require('path');
-var scriptName = path.basename(__filename);
+const fs = require('fs');
+const path = require('path');
+const scriptName = path.basename(__filename);
 
 // Load .env configuration.
 require(path.resolve(__dirname, './config/load-dotenv'));
