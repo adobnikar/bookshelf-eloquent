@@ -13,8 +13,8 @@ exports.seed = async function(knex, Promise) {
   let rng = new Math.seedrandom('mrdWmrNoKCLKwhN4CiyRbOaitxvVNPM0wCpQA0nXuL8gPwpIVU');
 
   // Get all users and posts.
-  let users = (await User.select('id').get()).toJSON();
-  let groups = (await Group.select('id').get()).toJSON();
+  let users = (await User.select('idAttr').get()).toJSON();
+  let groups = (await Group.select('idAttr').get()).toJSON();
 
   // Remove two random users.
   for (let i = 0; i < 2; i++)
@@ -27,8 +27,8 @@ exports.seed = async function(knex, Promise) {
   for (let user of users) {
     for (let group of groups) {
       pairs.push({
-        userId: user.id,
-        groupId: group.id,
+        userId: user.idAttr,
+        groupId: group.idAttr,
         approvedAt: (rng.int(5) === 1) ? null : (new Date()), // A random chance this enrolment is not approved.
       });
     }

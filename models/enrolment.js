@@ -7,6 +7,7 @@ require('./group');
 
 module.exports = Bookshelf.model('Enrolment', {
   tableName: 'enrolments',
+  idAttribute: 'idAttr',
   hasTimestamps: ['createdAt', 'updatedAt'],
 
   user: function() {

@@ -11,7 +11,7 @@ exports.test = async function() {
   for (let group of groups.models) {
     assert(group.has("name"));
     assert(group.has("description"));
-    assert(group.has("id"));
+    assert(group.has("idAttr"));
     assert(group.has("ownerId"));
 
     let gname = group.get("name");

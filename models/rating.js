@@ -7,6 +7,7 @@ require('./post');
 
 module.exports = Bookshelf.model('Rating', {
   tableName: 'ratings',
+  idAttribute: 'idAttr',
   hasTimestamps: ['createdAt', 'updatedAt'],
 
   user: function() {

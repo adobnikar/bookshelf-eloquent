@@ -9,6 +9,7 @@ require('./rating');
 
 module.exports = Bookshelf.model('Post', {
   tableName: 'posts',
+  idAttribute: 'idAttr',
   hasTimestamps: ['createdAt', 'updatedAt'],
   hidden: [
     'deletedAt',

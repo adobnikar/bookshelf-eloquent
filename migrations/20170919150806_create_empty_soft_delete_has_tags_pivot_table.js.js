@@ -5,8 +5,8 @@ exports.up = async function(knex, Promise) {
     table.charset('utf8');
     table.collate('utf8_unicode_ci');
 
-    table.integer('emptyId').unsigned().notNullable().references('empty_soft_delete.id').onUpdate('CASCADE').onDelete('CASCADE');
-    table.integer('tagId').unsigned().notNullable().references('empty_tags.id').onUpdate('CASCADE').onDelete('CASCADE');
+    table.integer('emptyId').unsigned().notNullable().references('empty_soft_delete.idAttr').onUpdate('CASCADE').onDelete('CASCADE');
+    table.integer('tagId').unsigned().notNullable().references('empty_tags.idAttr').onUpdate('CASCADE').onDelete('CASCADE');
     table.primary(['emptyId', 'tagId']);
   });
 };

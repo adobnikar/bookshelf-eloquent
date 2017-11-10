@@ -6,6 +6,7 @@ require('./empty-tag');
 
 module.exports = Bookshelf.model('Empty', {
   tableName: 'empty',
+  idAttribute: 'idAttr',
   hasTimestamps: ['createdAt', 'updatedAt'],
 
   tags: function() {

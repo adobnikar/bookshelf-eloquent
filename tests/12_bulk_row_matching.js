@@ -92,11 +92,11 @@ exports.test = async function() {
 
   // Check if models got their ids.
   m1 = m1.toJSON();
-  assert(m1.id != null);
+  assert(m1.idAttr != null);
   m2 = m2.toJSON();
-  assert(m2.id != null);
+  assert(m2.idAttr != null);
   m3 = m3.toJSON();
-  assert(m3.id != null);
+  assert(m3.idAttr != null);
 
   // Clear the empty table.
   await Empty.deleteAll();

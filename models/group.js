@@ -10,6 +10,7 @@ require('./enrolment');
 
 module.exports = Bookshelf.model('Group', {
   tableName: 'groups',
+  idAttribute: 'idAttr',
   hasTimestamps: ['createdAt', 'updatedAt'],
   hidden: [
     'deletedAt',

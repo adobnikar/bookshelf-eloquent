@@ -49,7 +49,7 @@ exports.setUp = async function() {
   await tagsCollection.insert();
 
   for (let emptyModel of emptyCollection.models) {
-    let tagsIds = emptyModel.tagModels.map(t => t.get('id'));
+    let tagsIds = emptyModel.tagModels.map(t => t.get('idAttr'));
     if (tagsIds.length > 0) await emptyModel.tags().attach(tagsIds);
   }
 };
@@ -68,10 +68,10 @@ exports.test = async function() {
   for (let empty of empties) {
     if (empty.tags.length > 0) emptiesWithTagsCountTest++;
     else emptiesWithNoTagsCountTest++;
-    for (let tag of empty.tags) tagsIds.add(tag.id);
+    for (let tag of empty.tags) tagsIds.add(tag.idAttr);
 
     let emptyTagsCount = await EmptyTag.whereHas('emptySoftDeletes', (sq) => {
-      sq.whereIn('id', [empty.id]);
+      sq.whereIn('idAttr', [empty.idAttr]);
     }).count();
     assert.equal(empty.tags.length, emptyTagsCount);
   }
@@ -81,10 +81,10 @@ exports.test = async function() {
   let tagsWithEmptiesCountTest = 0;
   for (let tag of tags) {
     if (tag.emptySoftDeletes.length > 0) tagsWithEmptiesCountTest++;
-    for (let empty of tag.emptySoftDeletes) emptiesIds.add(empty.id);
+    for (let empty of tag.emptySoftDeletes) emptiesIds.add(empty.idAttr);
 
     let tagEmptiesCount = await Empty.whereHas('tags', (sq) => {
-      sq.whereIn('id', [tag.id]);
+      sq.whereIn('idAttr', [tag.idAttr]);
     }).count();
     assert.equal(tag.emptySoftDeletes.length, tagEmptiesCount);
   }
@@ -92,14 +92,14 @@ exports.test = async function() {
 
   for (let tagId of tagsIds) {
     await Empty.whereHas('tags', (sq) => {
-      sq.whereIn('id', [tagId]);
+      sq.whereIn('idAttr', [tagId]);
     }).delete();
 
-    let tag = await EmptyTag.where('id', tagId).with('emptySoftDeletes').first();
+    let tag = await EmptyTag.where('idAttr', tagId).with('emptySoftDeletes').first();
     assert.equal(tag.emptySoftDeletes.length, 0);
 
     let tagEmptiesCount = await Empty.whereHas('tags', (sq) => {
-      sq.whereIn('id', [tagId]);
+      sq.whereIn('idAttr', [tagId]);
     }).count();
     assert.equal(tagEmptiesCount, 0);
   }

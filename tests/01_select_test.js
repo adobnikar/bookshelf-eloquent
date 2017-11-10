@@ -69,10 +69,10 @@ exports.test = async function() {
     .withDeleted().get()).models.map(modelAttrs);
   assert.deepStrictEqual(bookResult, knexResult);
 
-  // Select some attributes and id.
-  knexResult = (await knex.select(['id', 'text', 'postId'])
+  // Select some attributes and idAttr.
+  knexResult = (await knex.select(['idAttr', 'text', 'postId'])
     .from(Comment.prototype.tableName)).map(resetProto);
-  bookResult = (await Comment.select(['id', 'text', 'postId'])
+  bookResult = (await Comment.select(['idAttr', 'text', 'postId'])
     .withDeleted().get()).models.map(modelAttrs);
   assert.deepStrictEqual(bookResult, knexResult);
 };

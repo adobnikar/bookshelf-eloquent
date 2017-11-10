@@ -6,7 +6,7 @@ exports.up = async function(knex, Promise) {
     table.collate('utf8_unicode_ci');
 
     // User data.
-    table.increments('id').unsigned().primary();
+    table.increments('idAttr').unsigned().primary();
     table.string('firstName', 64).notNullable();
     table.string('lastName', 64).notNullable();
     table.string('studentId', 64).nullable().index();

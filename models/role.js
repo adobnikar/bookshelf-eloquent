@@ -6,6 +6,7 @@ require('./user');
 
 module.exports = Bookshelf.model('Role', {
   tableName: 'roles',
+  idAttribute: 'idAttr',
 
   roles: function() {
     return this.belongsToMany('Role', 'role_has_roles', 'fromRoleId', 'toRoleId');

@@ -5,11 +5,11 @@ exports.up = async function(knex, Promise) {
     table.charset('utf8');
     table.collate('utf8_unicode_ci');
 
-    table.increments('id').unsigned().primary();
+    table.increments('idAttr').unsigned().primary();
     table.string('name').nullable().unique();
     table.text('description').nullable();
     table.text('coverUrl').nullable();
-    table.integer('ownerId').unsigned().notNullable().references('users.id').onUpdate('CASCADE').onDelete('RESTRICT');
+    table.integer('ownerId').unsigned().notNullable().references('users.idAttr').onUpdate('CASCADE').onDelete('RESTRICT');
 
     // Soft delete.
     table.dateTime('deletedAt').nullable().index();

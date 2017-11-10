@@ -7,10 +7,10 @@ const User = require('../models/user-virtuals');
 exports.test = async function() {
   // Run the test. This function is required.
   // This test passes if no errors happen.
-  let id = 1;
+  let idAttr = 1;
 
   let group = await Group
-    .where({id: id})
+    .where({idAttr: idAttr})
     .with(['user'])
     .first();
 

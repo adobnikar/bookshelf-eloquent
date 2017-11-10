@@ -14,8 +14,8 @@ exports.seed = async function(knex, Promise) {
   let rng = new Math.seedrandom('cG2kzvugGkwUL3MI7RBJ6xgQd1TQSuZI2zc4jPdabATOMLhJP6');
 
   // Get all users and posts.
-  let users = (await User.select('id').get()).toJSON();
-  let posts = (await Post.select('id').withTrashed().get()).toJSON();
+  let users = (await User.select('idAttr').get()).toJSON();
+  let posts = (await Post.select('idAttr').withTrashed().get()).toJSON();
 
   // Seed faker.
   faker.seed(rng.int(1000000));
@@ -40,8 +40,8 @@ exports.seed = async function(knex, Promise) {
     // Create a random post.
     commentsCollection.add({
       text: faker.lorem.sentence(),
-      postId: post.id,
-      createdById: (rng.int(5) === 1) ? null : user.id, // A random chance this comment was created by an anonymous user.
+      postId: post.idAttr,
+      createdById: (rng.int(5) === 1) ? null : user.idAttr, // A random chance this comment was created by an anonymous user.
       deletedAt: (rng.int(5) === 1) ? (new Date()) : null, // A random chance this comment was deleted.
     });
   }

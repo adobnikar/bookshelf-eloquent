@@ -19,11 +19,11 @@ exports.test = async function() {
 
   // Insert users with existsing ids.
   let userCollection = Empty.collection();
-  let user1 = userCollection.add({id: 15340, name: 'Geovanny Waelchi Jr.', number: 81});
+  let user1 = userCollection.add({idAttr: 15340, name: 'Geovanny Waelchi Jr.', number: 81});
   let user2 = userCollection.add({name: 'Christ Green', number: 35});
-  let user3 = userCollection.add({id: 4646000, name: 'Timmy Windler', number: 2});
+  let user3 = userCollection.add({idAttr: 4646000, name: 'Timmy Windler', number: 2});
   let user4 = userCollection.add({name: 'Christ Green 2', number: 89});
-  let user5 = userCollection.add({id: 111, name: 'aaa', number: 222});
+  let user5 = userCollection.add({idAttr: 111, name: 'aaa', number: 222});
   let user6 = userCollection.add({name: 'bbb', number: 8989});
 
   // Check isNew.
@@ -41,23 +41,23 @@ exports.test = async function() {
   }
 
   let data = userCollection.toJSON();
-  data = sortBy(data, 'id');
+  data = sortBy(data, 'idAttr');
 
-  let data2 = (await Empty.select(['id', 'name', 'number'])
-    .orderBy('id').get()).toJSON();
+  let data2 = (await Empty.select(['idAttr', 'name', 'number'])
+    .orderBy('idAttr').get()).toJSON();
 
   assert.deepStrictEqual(data, data2);
 
   // Clear the empty table.
   await Empty.deleteAll();
 
-  // InsertBy users with existsing ids.
+  // InsertBy users with existsing idAttrs.
   userCollection = Empty.collection();
-  user1 = userCollection.add({id: 15340, name: 'Geovanny Waelchi Jr.', number: 81});
+  user1 = userCollection.add({idAttr: 15340, name: 'Geovanny Waelchi Jr.', number: 81});
   user2 = userCollection.add({name: 'Christ Green', number: 35});
-  user3 = userCollection.add({id: 4646000, name: 'Timmy Windler', number: 2});
+  user3 = userCollection.add({idAttr: 4646000, name: 'Timmy Windler', number: 2});
   user4 = userCollection.add({name: 'Christ Green 2', number: 89});
-  user5 = userCollection.add({id: 111, name: 'aaa', number: 222});
+  user5 = userCollection.add({idAttr: 111, name: 'aaa', number: 222});
   user6 = userCollection.add({name: 'bbb', number: 8989});
 
   // Check isNew.
@@ -66,7 +66,7 @@ exports.test = async function() {
     assert.equal(model.isNew(), (i % 2) === 1);
   }
 
-  await userCollection.insertBy(['name'], ['id', 'number']);
+  await userCollection.insertBy(['name'], ['idAttr', 'number']);
 
   // Check isNew.
   for (let i = 0; i < userCollection.models.length; i++) {
@@ -75,10 +75,10 @@ exports.test = async function() {
   }
 
   data = userCollection.toJSON();
-  data = sortBy(data, 'id');
+  data = sortBy(data, 'idAttr');
 
-  data2 = (await Empty.select(['id', 'name', 'number'])
-    .orderBy('id').get()).toJSON();
+  data2 = (await Empty.select(['idAttr', 'name', 'number'])
+    .orderBy('idAttr').get()).toJSON();
 
   assert.deepStrictEqual(data, data2);
 };

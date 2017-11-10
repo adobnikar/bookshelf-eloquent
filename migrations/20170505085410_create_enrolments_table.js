@@ -5,10 +5,10 @@ exports.up = async function(knex, Promise) {
     table.charset('utf8');
     table.collate('utf8_unicode_ci');
 
-    table.increments('id').unsigned().primary();
+    table.increments('idAttr').unsigned().primary();
     table.dateTime('approvedAt').nullable().index();
-    table.integer('userId').unsigned().notNullable().references('users.id').onUpdate('CASCADE').onDelete('CASCADE');
-    table.integer('groupId').unsigned().notNullable().references('groups.id').onUpdate('CASCADE').onDelete('CASCADE');
+    table.integer('userId').unsigned().notNullable().references('users.idAttr').onUpdate('CASCADE').onDelete('CASCADE');
+    table.integer('groupId').unsigned().notNullable().references('groups.idAttr').onUpdate('CASCADE').onDelete('CASCADE');
 
     // Timestamps.
     table.dateTime('createdAt').notNullable().defaultTo(knex.fn.now()).index();

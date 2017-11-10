@@ -7,7 +7,7 @@
     "index.js"
   ],
   "scripts": {
-    "migrate": "./node_modules/knex/bin/cli.js migrate:rollback && ./node_modules/knex/bin/cli.js migrate:latest && ./node_modules/knex/bin/cli.js seed:run",
+    "migrate": "node ./scripts/drop-all-tables.js && ./node_modules/knex/bin/cli.js migrate:latest && ./node_modules/knex/bin/cli.js seed:run",
     "test": "node test.js"
   },
   "repository": {
@@ -50,6 +50,7 @@
     "dotenv": "^4.0.0",
     "faker": "^4.1.0",
     "knex": "^0.13.0",
+    "moment": "^2.19.1",
     "mysql": "^2.13.0",
     "seedrandom": "^2.4.3"
   },

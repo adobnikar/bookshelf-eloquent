@@ -107,37 +107,37 @@ exports.test = async function() {
 
   // How many posts does each user have.
   let knexUserPostsMap = new Map();
-  (await knex.select(['id', 'createdById']).from(posts)
+  (await knex.select(['idAttr', 'createdById']).from(posts)
   .whereNull('deletedAt')).map((e) => {
     knexUserPostsMap.increment(e.createdById);
   });
 
-  let bookUsers = (await User.select('id').withCount('posts').get()).toJSON();
+  let bookUsers = (await User.select('idAttr').withCount('posts').get()).toJSON();
   for (let user of bookUsers) {
-    let expected = knexUserPostsMap.getDef(user.id, 0);
+    let expected = knexUserPostsMap.getDef(user.idAttr, 0);
     assert.equal(user.postsCount, expected);
   }
 
   bookUsers = (await User.withCount('posts').get()).toJSON();
   for (let user of bookUsers) {
-    let expected = knexUserPostsMap.getDef(user.id, 0);
+    let expected = knexUserPostsMap.getDef(user.idAttr, 0);
     assert.equal(user.postsCount, expected);
   }
 
   // How many posts does each user have with deleted.
   knexUserPostsMap = new Map();
-  (await knex.select(['id', 'createdById']).from(posts)
+  (await knex.select(['idAttr', 'createdById']).from(posts)
   .where('title', 'not like', '%a')).map((e) => {
     knexUserPostsMap.increment(e.createdById);
   });
 
-  bookUsers = (await User.select('id').withCount('posts', (q) => {
+  bookUsers = (await User.select('idAttr').withCount('posts', (q) => {
     q.withDeleted();
     q.whereNotLike('title', '%a');
   }).get()).toJSON();
 
   for (let user of bookUsers) {
-    let expected = knexUserPostsMap.getDef(user.id, 0);
+    let expected = knexUserPostsMap.getDef(user.idAttr, 0);
     assert.equal(user.postsCount, expected);
   }
 
@@ -147,15 +147,15 @@ exports.test = async function() {
   }).get()).toJSON();
 
   for (let user of bookUsers) {
-    let expected = knexUserPostsMap.getDef(user.id, 0);
+    let expected = knexUserPostsMap.getDef(user.idAttr, 0);
     assert.equal(user.postsCount, expected);
   }
 
   // How many friends does each user have.
   let knexUsersMap = new Map();
-  (await knex.select(['id', 'username']).from(users)
+  (await knex.select(['idAttr', 'username']).from(users)
   .whereNull('deletedAt')).map((e) => {
-    knexUsersMap.set(e.id, e);
+    knexUsersMap.set(e.idAttr, e);
   });
 
   let knexFriendsCount = new Map();
@@ -164,33 +164,33 @@ exports.test = async function() {
       knexFriendsCount.increment(e.user1Id);
   });
 
-  bookUsers = (await (await User.select('id')
+  bookUsers = (await (await User.select('idAttr')
     .withCount('friends1.user2')).get()).toJSON();
   for (let user of bookUsers) {
-    let expected = knexFriendsCount.getDef(user.id, 0);
+    let expected = knexFriendsCount.getDef(user.idAttr, 0);
     assert.equal(user.friends1User2Count, expected);
   }
 
   bookUsers = (await (await User.withCount('friends1.user2')).get()).toJSON();
   for (let user of bookUsers) {
-    let expected = knexFriendsCount.getDef(user.id, 0);
+    let expected = knexFriendsCount.getDef(user.idAttr, 0);
     assert.equal(user.friends1User2Count, expected);
   }
 
   // How many post comments, post tags and commants does each user have.
   let knexPostUsersMap = new Map();
-  (await knex.select(['id', 'createdById']).from(posts)
+  (await knex.select(['idAttr', 'createdById']).from(posts)
   .whereNull('deletedAt')).map((e) => {
-    knexPostUsersMap.set(e.id, e.createdById);
+    knexPostUsersMap.set(e.idAttr, e.createdById);
   });
 
   let knexUserPostsCommentsCount = new Map();
   let knexUserCommentsCount = new Map();
-  (await knex.select(['id', 'postId', 'createdById']).from(comments)
+  (await knex.select(['idAttr', 'postId', 'createdById']).from(comments)
   .whereNull('deletedAt').where('text', 'not like', 'q%')).map((e) => {
     knexUserCommentsCount.increment(e.createdById);
     if (knexPostUsersMap.has(e.postId))
-      knexUserPostsCommentsCount.add(knexPostUsersMap.get(e.postId), e.id);
+      knexUserPostsCommentsCount.add(knexPostUsersMap.get(e.postId), e.idAttr);
   });
 
   let knexUserPostTagsCount = new Map();
@@ -199,7 +199,7 @@ exports.test = async function() {
       knexUserPostTagsCount.add(knexPostUsersMap.get(e.postId), e.tagId);
   });
 
-  bookUsers = (await User.select(['id', 'username'])
+  bookUsers = (await User.select(['idAttr', 'username'])
     .withCount('posts.comments', (q) => {
       q.whereNotLike('text', 'q%');
     })
@@ -210,11 +210,11 @@ exports.test = async function() {
     .get()).toJSON();
 
   for (let user of bookUsers) {
-    let expected = knexUserPostsCommentsCount.getDef(user.id, new Set()).size;
+    let expected = knexUserPostsCommentsCount.getDef(user.idAttr, new Set()).size;
     assert.equal(user.postsCommentsCount, expected);
-    expected = knexUserCommentsCount.getDef(user.id, 0);
+    expected = knexUserCommentsCount.getDef(user.idAttr, 0);
     assert.equal(user.commentsCount, expected);
-    expected = knexUserPostTagsCount.getDef(user.id, new Set()).size;
+    expected = knexUserPostTagsCount.getDef(user.idAttr, new Set()).size;
     assert.equal(user.postsTagsCount, expected);
   }
 
@@ -228,28 +228,28 @@ exports.test = async function() {
   .get()).toJSON();
 
   for (let user of bookUsers) {
-    let expected = knexUserPostsCommentsCount.getDef(user.id, new Set()).size;
+    let expected = knexUserPostsCommentsCount.getDef(user.idAttr, new Set()).size;
     assert.equal(user.postsCommentsCount, expected);
-    expected = knexUserCommentsCount.getDef(user.id, 0);
+    expected = knexUserCommentsCount.getDef(user.idAttr, 0);
     assert.equal(user.commentsCount, expected);
-    expected = knexUserPostTagsCount.getDef(user.id, new Set()).size;
+    expected = knexUserPostTagsCount.getDef(user.idAttr, new Set()).size;
     assert.equal(user.postsTagsCount, expected);
   }
 
   // Same as the previous example only with an object as the withRelated parameter.
   knexPostUsersMap = new Map();
-  (await knex.select(['id', 'createdById']).from(posts)
+  (await knex.select(['idAttr', 'createdById']).from(posts)
   .whereNull('deletedAt')).map((e) => {
-    knexPostUsersMap.set(e.id, e.createdById);
+    knexPostUsersMap.set(e.idAttr, e.createdById);
   });
 
   knexUserPostsCommentsCount = new Map();
   knexUserCommentsCount = new Map();
-  (await knex.select(['id', 'postId', 'createdById']).from(comments)
+  (await knex.select(['idAttr', 'postId', 'createdById']).from(comments)
   .whereNull('deletedAt').where('text', 'not like', 'q%')).map((e) => {
     knexUserCommentsCount.increment(e.createdById);
     if (knexPostUsersMap.has(e.postId))
-      knexUserPostsCommentsCount.add(knexPostUsersMap.get(e.postId), e.id);
+      knexUserPostsCommentsCount.add(knexPostUsersMap.get(e.postId), e.idAttr);
   });
 
   knexUserPostTagsCount = new Map();
@@ -258,7 +258,7 @@ exports.test = async function() {
       knexUserPostTagsCount.add(knexPostUsersMap.get(e.postId), e.tagId);
   });
 
-  bookUsers = (await User.select(['id', 'username'])
+  bookUsers = (await User.select(['idAttr', 'username'])
     .withCount('posts.comments', (q) => {
       q.whereNotLike('text', 'q%');
     })
@@ -269,11 +269,11 @@ exports.test = async function() {
     .get()).toJSON();
 
   for (let user of bookUsers) {
-    let expected = knexUserPostsCommentsCount.getDef(user.id, new Set()).size;
+    let expected = knexUserPostsCommentsCount.getDef(user.idAttr, new Set()).size;
     assert.equal(user.postsCommentsCount, expected);
-    expected = knexUserCommentsCount.getDef(user.id, 0);
+    expected = knexUserCommentsCount.getDef(user.idAttr, 0);
     assert.equal(user.commentsCount, expected);
-    expected = knexUserPostTagsCount.getDef(user.id, new Set()).size;
+    expected = knexUserPostTagsCount.getDef(user.idAttr, new Set()).size;
     assert.equal(user.postsTagsCount, expected);
   }
 
@@ -288,11 +288,11 @@ exports.test = async function() {
   }).get()).toJSON();
 
   for (let user of bookUsers) {
-    let expected = knexUserPostsCommentsCount.getDef(user.id, new Set()).size;
+    let expected = knexUserPostsCommentsCount.getDef(user.idAttr, new Set()).size;
     assert.equal(user.postsCommentsCount, expected);
-    expected = knexUserCommentsCount.getDef(user.id, 0);
+    expected = knexUserCommentsCount.getDef(user.idAttr, 0);
     assert.equal(user.commentsCount, expected);
-    expected = knexUserPostTagsCount.getDef(user.id, new Set()).size;
+    expected = knexUserPostTagsCount.getDef(user.idAttr, new Set()).size;
     assert.equal(user.postsTagsCount, expected);
   }
 
@@ -302,45 +302,45 @@ exports.test = async function() {
     knexPostTagsCount.increment(e.postId);
   });
 
-  let bookPosts = (await Post.select(['id', 'title'])
+  let bookPosts = (await Post.select(['idAttr', 'title'])
     .withCount('tags').get()).toJSON();
   for (let post of bookPosts) {
-    let expected = knexPostTagsCount.getDef(post.id, 0);
+    let expected = knexPostTagsCount.getDef(post.idAttr, 0);
     assert.equal(post.tagsCount, expected);
   }
 
   bookPosts = (await Post.withCount('tags').get()).toJSON();
   for (let post of bookPosts) {
-    let expected = knexPostTagsCount.getDef(post.id, 0);
+    let expected = knexPostTagsCount.getDef(post.idAttr, 0);
     assert.equal(post.tagsCount, expected);
   }
 
   // How many post users does a comment have.
   knexPostUsersMap = new Map();
-  (await knex.select(['id', 'createdById']).from(posts)
+  (await knex.select(['idAttr', 'createdById']).from(posts)
   .whereNull('deletedAt')).map((e) => {
-    knexPostUsersMap.set(e.id, e.createdById);
+    knexPostUsersMap.set(e.idAttr, e.createdById);
   });
 
   let commentPostUserCount = new Map();
-  (await knex.select(['id', 'postId']).from(comments)
+  (await knex.select(['idAttr', 'postId']).from(comments)
   .whereNull('deletedAt')).map((e) => {
     if (knexPostUsersMap.has(e.postId))
-      commentPostUserCount.increment(e.id);
+      commentPostUserCount.increment(e.idAttr);
   });
 
-  let bookComments = (await Comment.select(['id', 'text'])
+  let bookComments = (await Comment.select(['idAttr', 'text'])
     .withCount('post.createdBy').get()).toJSON();
 
   for (let comment of bookComments) {
-    let expected = commentPostUserCount.getDef(comment.id, 0);
+    let expected = commentPostUserCount.getDef(comment.idAttr, 0);
     assert.equal(comment.postCreatedByCount, expected);
   }
 
   bookComments = (await Comment.withCount('post.createdBy').get()).toJSON();
 
   for (let comment of bookComments) {
-    let expected = commentPostUserCount.getDef(comment.id, 0);
+    let expected = commentPostUserCount.getDef(comment.idAttr, 0);
     assert.equal(comment.postCreatedByCount, expected);
   }
 };

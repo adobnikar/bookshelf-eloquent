@@ -66,12 +66,12 @@ exports.test = async function() {
   let knexResultPost = new Map();
   (await knex.select().from(Post.prototype.tableName)
     .whereNull('deletedAt')).map(bookify(Post)).map((e) => {
-      if (e.id !== null) knexResultPost.set(e.id, e);
+      if (e.idAttr !== null) knexResultPost.set(e.idAttr, e);
     });
   let knexResultUsers = new Map();
   (await knex.select().from(User.prototype.tableName)
     .whereNull('deletedAt')).map(bookify(User)).map((e) => {
-      if (e.id !== null) knexResultUsers.set(e.id, e);
+      if (e.idAttr !== null) knexResultUsers.set(e.idAttr, e);
     });
 
   for (let comment of knexResult) {
@@ -98,12 +98,12 @@ exports.test = async function() {
   knexResultPost = new Map();
   (await knex.select().from(Post.prototype.tableName)
     .whereNull('deletedAt')).map(bookify(Post)).map((e) => {
-      if (e.id !== null) knexResultPost.set(e.id, e);
+      if (e.idAttr !== null) knexResultPost.set(e.idAttr, e);
     });
   knexResultUsers = new Map();
-  (await knex.select(['id', 'username']).from(User.prototype.tableName)
+  (await knex.select(['idAttr', 'username']).from(User.prototype.tableName)
     .whereNull('deletedAt')).map(bookify(User)).map((e) => {
-      if (e.id !== null) knexResultUsers.set(e.id, e);
+      if (e.idAttr !== null) knexResultUsers.set(e.idAttr, e);
     });
 
   for (let comment of knexResult) {
@@ -129,16 +129,16 @@ exports.test = async function() {
   knexResult = (await knex.select().from(Comment.prototype.tableName)
     .whereNull('deletedAt')).map(bookify(Comment));
   knexResultPost = new Map();
-  (await knex.select(['id', 'text', 'createdById'])
+  (await knex.select(['idAttr', 'text', 'createdById'])
     .from(Post.prototype.tableName)
     .where('title', 'not like', 'a%')
     .whereNull('deletedAt')).map(bookify(Post)).map((e) => {
-      if (e.id !== null) knexResultPost.set(e.id, e);
+      if (e.idAttr !== null) knexResultPost.set(e.idAttr, e);
     });
   knexResultUsers = new Map();
-  (await knex.select(['id', 'username']).from(User.prototype.tableName)
+  (await knex.select(['idAttr', 'username']).from(User.prototype.tableName)
     .whereNull('deletedAt')).map(bookify(User)).map((e) => {
-      if (e.id !== null) knexResultUsers.set(e.id, e);
+      if (e.idAttr !== null) knexResultUsers.set(e.idAttr, e);
     });
 
   for (let comment of knexResult) {

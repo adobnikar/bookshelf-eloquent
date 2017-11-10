@@ -7,6 +7,7 @@ require('./empty-soft-delete');
 
 module.exports = Bookshelf.model('EmptyTag', {
   tableName: 'empty_tags',
+  idAttribute: 'idAttr',
 
   empties: function() {
     return this.belongsToMany('Empty', 'empty_has_tags', 'tagId', 'emptyId');

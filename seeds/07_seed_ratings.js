@@ -14,8 +14,8 @@ exports.seed = async function(knex, Promise) {
   let rng = new Math.seedrandom('qaJawrTFKQ4n3wtxx3ZJmVhRLif7NTe2M19np61fWBMP3pkIFn');
 
   // Get all users and posts.
-  let users = (await User.select('id').get()).toJSON();
-  let posts = (await Post.select('id').withDeleted().get()).toJSON();
+  let users = (await User.select('idAttr').get()).toJSON();
+  let posts = (await Post.select('idAttr').withDeleted().get()).toJSON();
 
   // Seed faker.
   faker.seed(rng.int(1000000));
@@ -32,8 +32,8 @@ exports.seed = async function(knex, Promise) {
   for (let user of users) {
     for (let post of posts) {
       pairs.push({
-        userId: user.id,
-        postId: post.id,
+        userId: user.idAttr,
+        postId: post.idAttr,
         value: rng.int(6),
         comment: faker.lorem.sentence(),
       });

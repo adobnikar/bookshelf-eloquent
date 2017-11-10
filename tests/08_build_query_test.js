@@ -28,35 +28,35 @@ exports.test = async function() {
   let subquery = await User.where('votes', '>', 100)
     .andWhere('status', 'active')
     .orWhere('name', 'John')
-    .select('id').buildQuery();
+    .select('idAttr').buildQuery();
   let posts = await Post.whereIn('createdById', subquery.query).buildQuery();
   assert.equal(posts.query.toString(),
-    'select `posts`.* from `posts` where `createdById` in (select `id` from ' +
+    'select `posts`.* from `posts` where `createdById` in (select `idAttr` from ' +
     '`users` where `votes` > 100 and `status` = \'active\' or `name` ' +
     '= \'John\' and `users`.`deletedAt` is null) and ' +
     '`posts`.`deletedAt` is null');
 
-  subquery = await Post.select('id').buildQuery();
+  subquery = await Post.select('idAttr').buildQuery();
   let comments = await Comment.select('name')
     .whereIn('postId', subquery.query).buildQuery();
   assert.equal(comments.query.toString(), 'select `name` from `comments` ' +
-    'where `postId` in (select `id` from `posts` where `posts`.`deletedAt` ' +
+    'where `postId` in (select `idAttr` from `posts` where `posts`.`deletedAt` ' +
     'is null) and `comments`.`deletedAt` is null');
 
-  let sync = await User.where('id', 57).fakeSync();
+  let sync = await User.where('idAttr', 57).fakeSync();
   let knexBuilder = sync.query;
   assert.equal(knexBuilder.toString(),
-    'select * from `users` where `id` = 57 and `users`.`deletedAt` is null');
+    'select * from `users` where `idAttr` = 57 and `users`.`deletedAt` is null');
 
-  sync = await User.where('id', 57).buildQuery({columns: ['id', 'username']});
+  sync = await User.where('idAttr', 57).buildQuery({columns: ['idAttr', 'username']});
   knexBuilder = sync.query;
   assert.equal(knexBuilder.toString(),
-    'select `id`, `username` from `users` where `id` = 57 and ' +
+    'select `idAttr`, `username` from `users` where `idAttr` = 57 and ' +
     '`users`.`deletedAt` is null');
 
-  sync = await User.where('id', 57).useTableAlias('t').buildQuery();
+  sync = await User.where('idAttr', 57).useTableAlias('t').buildQuery();
   knexBuilder = sync.query;
-  assert.equal(knexBuilder.toString(), 'select `t`.* from `users` as `t` where `id` = 57 and `t`.`deletedAt` is null');
+  assert.equal(knexBuilder.toString(), 'select `t`.* from `users` as `t` where `idAttr` = 57 and `t`.`deletedAt` is null');
 };
 
 

@@ -9,7 +9,7 @@ const Empty = require('../models/empty');
 exports.setUp = async function() {
   // Prepare the data for the test. This is an optional function.
   // Clear the empty table.
-  await Empty.where('id', '>', 0).delete();
+  await Empty.where('idAttr', '>', 0).delete();
 };
 
 exports.test = async function() {
@@ -38,7 +38,7 @@ exports.test = async function() {
   assert.deepStrictEqual(data2, data);
 
   // Clear the empty table.
-  await Empty.where('id', '>', 0).delete();
+  await Empty.where('idAttr', '>', 0).delete();
 
   // Test with duplicate entries.
   data = [];
@@ -73,19 +73,19 @@ exports.test = async function() {
   assert.deepStrictEqual(data2, data3);
 
   // Insert By test
-  data2 = (await Empty.select(['name', 'number', 'id']).get()).toJSON();
+  data2 = (await Empty.select(['name', 'number', 'idAttr']).get()).toJSON();
 
   emptyCollection = Empty.collection();
   for (let d of data)
     emptyCollection.addMemo(d, {unique: ['name']});
 
-  await emptyCollection.insertBy(['name'], ['id', 'number']);
+  await emptyCollection.insertBy(['name'], ['idAttr', 'number']);
   data3 = emptyCollection.toJSON();
 
   assert.deepStrictEqual(data3, data2);
 
   // Clear the empty table.
-  await Empty.where('id', '>', 0).delete();
+  await Empty.where('idAttr', '>', 0).delete();
 
   // Readme examples
   let userCollection = Empty.collection();
@@ -95,8 +95,8 @@ exports.test = async function() {
 
   await userCollection.insert();
 
-  // Check if id was set.
-  assert(user3.toJSON().id);
+  // Check if idAttr was set.
+  assert(user3.toJSON().idAttr);
 
   userCollection = Empty.collection();
   user1 = userCollection.add({name: 'Christ Green', number: 89});
@@ -110,10 +110,10 @@ exports.test = async function() {
 
   await userCollection.insert(true);
 
-  let users = await Empty.select(['id', 'name', 'number']).get();
+  let users = await Empty.select(['idAttr', 'name', 'number']).get();
 
   // Clear the empty table.
-  await Empty.where('id', '>', 0).delete();
+  await Empty.where('idAttr', '>', 0).delete();
 
   // Create a Bookshelf collection.
   userCollection = Empty.collection();
@@ -148,7 +148,7 @@ exports.test = async function() {
   assert(user4a === user4b);
 
   // Clear the empty table.
-  await Empty.where('id', '>', 0).delete();
+  await Empty.where('idAttr', '>', 0).delete();
 
   // Create a Bookshelf collection.
   userCollection = Empty.collection();
@@ -176,7 +176,7 @@ exports.test = async function() {
   data3 = userCollection.toJSON();
 
   for (let i = 0; i < data2.length; i++) {
-    assert(data3[i].id != null);
+    assert(data3[i].idAttr != null);
     assert.equal(data3[i].name, data2[i].name);
     assert.equal(data3[i].number, data2[i].number);
   }
@@ -185,5 +185,5 @@ exports.test = async function() {
 exports.tearDown = async function() {
   // Clean everything after test. This is an optional function.
   // Clear the empty table.
-  await Empty.where('id', '>', 0).delete();
+  await Empty.where('idAttr', '>', 0).delete();
 };

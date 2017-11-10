@@ -6,6 +6,7 @@ require('./user');
 
 module.exports = Bookshelf.model('Friend', {
   tableName: 'friends',
+  idAttribute: 'idAttr',
   hasTimestamps: ['createdAt', 'updatedAt'],
 
   user1: function() {

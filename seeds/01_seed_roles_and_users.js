@@ -85,10 +85,10 @@ exports.seed = async function(knex, Promise) {
     superAdminRole.roles().detach(),
   ]);
   await Promise.all([
-    groupAdminRole.roles().attach([adminRole.attributes.id]),
-    deviceAdminRole.roles().attach([adminRole.attributes.id]),
-    userAdminRole.roles().attach([adminRole.attributes.id]),
-    superAdminRole.roles().attach([groupAdminRole.attributes.id, userAdminRole.attributes.id, deviceAdminRole.attributes.id]),
+    groupAdminRole.roles().attach([adminRole.attributes.idAttr]),
+    deviceAdminRole.roles().attach([adminRole.attributes.idAttr]),
+    userAdminRole.roles().attach([adminRole.attributes.idAttr]),
+    superAdminRole.roles().attach([groupAdminRole.attributes.idAttr, userAdminRole.attributes.idAttr, deviceAdminRole.attributes.idAttr]),
   ]);
 
   // Create users.
@@ -116,14 +116,14 @@ exports.seed = async function(knex, Promise) {
   await Promise.all(roleDetachTasks);
 
   await Promise.all([
-    adminUser.roles().attach([adminRole.attributes.id]),
-    groupAdminUser.roles().attach([groupAdminRole.attributes.id]),
-    deviceAdminUser.roles().attach([deviceAdminRole.attributes.id]),
-    userAdminUser.roles().attach([userAdminRole.attributes.id]),
-    superAdminUser.roles().attach([superAdminRole.attributes.id, userAdminRole.attributes.id]),
-    studentUser.roles().attach([studentRole.attributes.id]),
-    student2User.roles().attach([studentRole.attributes.id]),
-    student3User.roles().attach([studentRole.attributes.id]),
-    student4User.roles().attach([studentRole.attributes.id]),
+    adminUser.roles().attach([adminRole.attributes.idAttr]),
+    groupAdminUser.roles().attach([groupAdminRole.attributes.idAttr]),
+    deviceAdminUser.roles().attach([deviceAdminRole.attributes.idAttr]),
+    userAdminUser.roles().attach([userAdminRole.attributes.idAttr]),
+    superAdminUser.roles().attach([superAdminRole.attributes.idAttr, userAdminRole.attributes.idAttr]),
+    studentUser.roles().attach([studentRole.attributes.idAttr]),
+    student2User.roles().attach([studentRole.attributes.idAttr]),
+    student3User.roles().attach([studentRole.attributes.idAttr]),
+    student4User.roles().attach([studentRole.attributes.idAttr]),
   ]);
 };

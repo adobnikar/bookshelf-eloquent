@@ -29,8 +29,8 @@ exports.test = async function() {
 
   t1 = (await User.with('mgroups').get()).toJSON();
   t2 = (await Group.query('where', 'name', 'like', '%math%').with('owner').get()).toJSON();
-  assert.deepStrictEqual(t1.filter((t) => { return t.mgroups.length > 0; }).map((t) => { return t.id; }).sort(),
-    union(t2.map((t) => { return t.owner.id; }), []).sort());
+  assert.deepStrictEqual(t1.filter((t) => { return t.mgroups.length > 0; }).map((t) => { return t.idAttr; }).sort(),
+    union(t2.map((t) => { return t.owner.idAttr; }), []).sort());
 };
 
 exports.tearDown = async function() {

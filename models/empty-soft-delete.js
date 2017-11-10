@@ -6,6 +6,7 @@ require('./empty-tag');
 
 module.exports = Bookshelf.model('EmptySoftDelete', {
   tableName: 'empty_soft_delete',
+  idAttribute: 'idAttr',
   hasTimestamps: ['createdAt', 'updatedAt'],
   hidden: [
     'deletedAt',
