@@ -22,6 +22,8 @@ const Tag = require('../models/tag');
 const User = require('../models/user');
 const Empty = require('../models/empty');
 
+const Person = require('../models/person');
+
 function modelAttrs(model) {
   return model.attributes;
 }
@@ -116,6 +118,9 @@ exports.test = async function() {
     assert.equal(user.postsCount > 0 && (user.deletedAt !== null),
       usersIndex.has(user.idAttr));
   }
+
+  assert.equal((await Person.has('dogs').buildQuery()).query.toString(),
+    'select `person`.* from `person` where (exists (select * from `dog` where `person_idAttr` in (`person`.`idAttr`) and `dog`.`deletedAt` is null)) and `person`.`deletedAt` is null');
 
   assert.equal((await User.has('posts').buildQuery()).query.toString(),
     'select `users`.* from `users` where (exists (select * from `posts` where `createdById` in (`users`.`idAttr`) and `posts`.`deletedAt` is null)) and `users`.`deletedAt` is null');
