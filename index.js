@@ -1057,8 +1057,8 @@ module.exports = function(Bookshelf, options) {
       case 'belongsToMany':
         // HasMany part.
         if (isString(subquery))
-          subquery = knex.raw('(??.??)', [subquery, Model.idAttribute]);
-        else subquery = subquery.select(Model.idAttribute);
+          subquery = knex.raw('(??.??)', [subquery, rd.parentIdAttribute]);
+        else subquery = subquery.select(rd.parentIdAttribute);
 
         // Pivot table part.
         subquery = knex.select(rd.otherKey)
@@ -1070,8 +1070,8 @@ module.exports = function(Bookshelf, options) {
         break;
       case 'hasMany':
         if (isString(subquery))
-          subquery = knex.raw('(??.??)', [subquery, Model.idAttribute]);
-        else subquery = subquery.select(Model.idAttribute);
+          subquery = knex.raw('(??.??)', [subquery, rd.parentIdAttribute]);
+        else subquery = subquery.select(rd.parentIdAttribute);
         bookQuery.whereIn(rd.key('foreignKey'), subquery);
         break;
       case 'belongsTo':
