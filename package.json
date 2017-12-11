@@ -35,7 +35,8 @@
     "orderBy",
     "table alias",
     "bulk insert",
-    "nested where"
+    "nested where",
+    "relation aliases"
   ],
   "author": "Andraž Dobnikar <andraz.dobnikar@hotmail.com>",
   "license": "MIT",

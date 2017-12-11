@@ -593,9 +593,9 @@ module.exports = function(Bookshelf, options) {
 
     // fetch all withs
     let loadRelationTasks = [];
-    for (let withRelationName in this.eloquent.withs) {
+    for (let withRelationText in this.eloquent.withs) {
       // get the relatedData
-      let relation = this.eloquent.withs[withRelationName];
+      let relation = this.eloquent.withs[withRelationText];
       let rd = relation.relatedData;
 
       // Check if parent ids required.
@@ -606,7 +606,7 @@ module.exports = function(Bookshelf, options) {
         // extract the model id for each model
         for (let model of collection.models) {
           if (!(rd.parentIdAttribute in model.attributes))
-            throw new Error('Failed to eager load the "' + withRelationName +
+            throw new Error('Failed to eager load the "' + withRelationText +
               '" relation of the "' + rd.parentTableName +
               '" model. If you want to eager load a hasMany or ' +
               'belongsToMany relation of a model then the model ' +
@@ -621,19 +621,19 @@ module.exports = function(Bookshelf, options) {
       switch (rd.type)	{
         case 'belongsToMany':
           loadRelationTasks.push(eagerLoadBelongsToManyRelation.apply(this,
-            [ids, collection, withRelationName]));
+            [ids, collection, withRelationText]));
           break;
         case 'hasMany':
           loadRelationTasks.push(eagerLoadHasManyRelation.apply(this,
-            [ids, collection, withRelationName]));
+            [ids, collection, withRelationText]));
           break;
         case 'belongsTo':
         case 'hasOne':
           loadRelationTasks.push(eagerLoadBelongsToRelation.apply(this,
-            [collection, withRelationName]));
+            [collection, withRelationText]));
           break;
         default:
-          throw new Error('Failed to eager load the "' + withRelationName +
+          throw new Error('Failed to eager load the "' + withRelationText +
             '" relation of the "' + rd.parentTableName +
             '" model. Relation type ' + rd.type +
             ' not supported/implemented for the with statement.');
@@ -648,9 +648,9 @@ module.exports = function(Bookshelf, options) {
   };
 
   async function eagerLoadBelongsToManyRelation(ids, collection,
-    withRelationName) {
+    withRelationText) {
     // Get the relatedData and relation/relatedQuery.
-    let relatedQuery = this.eloquent.withs[withRelationName];
+    let relatedQuery = this.eloquent.withs[withRelationText];
     let rd = relatedQuery.relatedData;
     // Remove relatedData to bypass bookshelf eager loading functionallity.
     delete relatedQuery.relatedData;
@@ -691,7 +691,7 @@ module.exports = function(Bookshelf, options) {
     let relatedModelIndex = new Map();
     for (let relatedModel of relatedModels.models) {
       if (!(relatedIdAttribute in relatedModel.attributes))
-        throw new Error('Failed to eager load the "' + withRelationName +
+        throw new Error('Failed to eager load the "' + withRelationText +
               '" relation of the "' + rd.parentTableName +
               '" model. If you want to eager load a belongsToMany ' +
               'relation of a model then the related model ' +
@@ -705,6 +705,7 @@ module.exports = function(Bookshelf, options) {
     }
 
     // attach the relatedModels to the model(s)
+    let {firstRelationName, firstRelationAlias} = parseWithRelation(withRelationText);
     for (let model of collection.models) {
       let rModels = [];
       let rById = {};
@@ -726,19 +727,19 @@ module.exports = function(Bookshelf, options) {
       }
 
       // add the relation
-      let newRelation = this.getRelation(withRelationName);
+      let newRelation = this.getRelation(firstRelationName);
       newRelation.models = rModels;
       newRelation._byId = rById;
       newRelation.length = rModels.length;
 
       // relations attribute should already exist on each model
-      model.relations[withRelationName] = newRelation;
+      model.relations[firstRelationAlias] = newRelation;
     }
   };
 
-  async function eagerLoadHasManyRelation(ids, collection, withRelationName) {
+  async function eagerLoadHasManyRelation(ids, collection, withRelationText) {
     // Get the relatedData and relation/relatedQuery.
-    let relatedQuery = this.eloquent.withs[withRelationName];
+    let relatedQuery = this.eloquent.withs[withRelationText];
     let rd = relatedQuery.relatedData;
     // Remove relatedData to bypass bookshelf eager loading functionallity.
     delete relatedQuery.relatedData;
@@ -757,7 +758,7 @@ module.exports = function(Bookshelf, options) {
     let foreignKeyIndex = new Map();
     for (let relatedModel of relatedModels.models) {
       if (!(relatedFkAttribute in relatedModel.attributes))
-        throw new Error('Failed to eager load the "' + withRelationName +
+        throw new Error('Failed to eager load the "' + withRelationText +
               '" relation of the "' + rd.parentTableName +
               '" model. If you want to eager load a hasMany ' +
               'relation of a model then it\'s related model ' +
@@ -774,6 +775,7 @@ module.exports = function(Bookshelf, options) {
     }
 
     // attach the relatedModels to the model(s)
+    let {firstRelationName, firstRelationAlias} = parseWithRelation(withRelationText);
     for (let model of collection.models) {
       let rModels = [];
       let rById = {};
@@ -789,19 +791,19 @@ module.exports = function(Bookshelf, options) {
       }
 
       // add the relation
-      let newRelation = this.getRelation(withRelationName);
+      let newRelation = this.getRelation(firstRelationName);
       newRelation.models = rModels;
       newRelation._byId = rById;
       newRelation.length = rModels.length;
 
       // relations attribute should already exist on each model
-      model.relations[withRelationName] = newRelation;
+      model.relations[firstRelationAlias] = newRelation;
     }
   };
 
-  async function eagerLoadBelongsToRelation(collection, withRelationName) {
+  async function eagerLoadBelongsToRelation(collection, withRelationText) {
     // Get the relatedData and relation/relatedQuery.
-    let relatedQuery = this.eloquent.withs[withRelationName];
+    let relatedQuery = this.eloquent.withs[withRelationText];
     let rd = relatedQuery.relatedData;
     // Remove relatedData to bypass bookshelf eager loading functionallity.
     delete relatedQuery.relatedData;
@@ -816,7 +818,7 @@ module.exports = function(Bookshelf, options) {
     // extract the foreignKey for each model
     for (let model of collection.models) {
       if (!(relatedFkAttribute in model.attributes))
-        throw new Error('Failed to eager load the "' + withRelationName +
+        throw new Error('Failed to eager load the "' + withRelationText +
           '" relation of the "' + rd.parentTableName +
           '" model. If you want to eager load a belongsTo ' +
           'relation of a model then the model ' +
@@ -850,12 +852,13 @@ module.exports = function(Bookshelf, options) {
     }
 
     // attach the relatedModels to the model(s)
+    let {firstRelationName, firstRelationAlias} = parseWithRelation(withRelationText);
     for (let model of collection.models) {
       // add/create the relation
-      let newRelation = this.getRelation(withRelationName);
+      let newRelation = this.getRelation(firstRelationName);
 
       // set the relation to be null by default
-      model.attributes[withRelationName] = null;
+      model.attributes[firstRelationAlias] = null;
 
       if (model.attributes[relatedFkAttribute] === null) continue;
       let relatedId = model.attributes[relatedFkAttribute];
@@ -883,7 +886,7 @@ module.exports = function(Bookshelf, options) {
       }
 
       // relations attribute should already exist on each model
-      model.relations[withRelationName] = newRelation;
+      model.relations[firstRelationAlias] = newRelation;
     }
   };
 
@@ -922,6 +925,70 @@ module.exports = function(Bookshelf, options) {
     return withRelated;
   };
 
+  // Support for aliases.
+  function parseWithRelation(relationText) {
+    let tokens = relationText.split(/\s/).map(t => t.trim()).filter(t => (t.length > 0));
+    let invalidFormatError = `Invalid relation name '${relationText}'. Correct format is "[relationName]" or "[relationName] as [alias]".`;
+    let aliasTokens = [];
+    let firstRelationAlias = null;
+    if (tokens.length === 3) {
+      if (tokens[1].toLowerCase() !== 'as') throw new Error(invalidFormatError);
+      let relationAlias = tokens[2];
+      aliasTokens = relationAlias.split('.').map(t => t.trim()).filter(t => (t.length > 0));
+      if (aliasTokens.length > 0) firstRelationAlias = aliasTokens.shift();
+    } else if (tokens.length !== 1) throw new Error(invalidFormatError);
+    let relationPath = tokens[0];
+
+    // Split relation name by . (dots) to handle nested/sub relations.
+    tokens = relationPath.split('.').map(t => t.trim()).filter(t => (t.length > 0));
+    if (tokens.length < 1) throw new Error(`Invalid relation name '${relationPath}'.`);
+    let firstRelationName = tokens.shift();
+    let hasSubRelation = (tokens.length > 0);
+    let subRelationText = null;
+    if (hasSubRelation) {
+      subRelationText = tokens.join('.');
+      if (aliasTokens.length > 0) subRelationText += ' as ' + aliasTokens.join('.');
+    }
+    if (firstRelationAlias == null) firstRelationAlias = firstRelationName;
+
+    return {
+      firstRelationName: firstRelationName,
+      firstRelationAlias: firstRelationAlias,
+      hasSubRelation: hasSubRelation,
+      subRelationText: subRelationText,
+    }
+  }
+
+  function parseWithCountRelation(relationText) {
+    let tokens = relationText.split(/\s/).map(t => t.trim()).filter(t => (t.length > 0));
+    let relationAlias = null;
+    let invalidFormatError = `Invalid relation name '${relationText}'. Correct format is "[relationName]" or "[relationName] as [alias]".`;
+    if (tokens.length === 3) {
+      if (tokens[1].toLowerCase() !== 'as') throw new Error(invalidFormatError);
+      relationAlias = tokens[2];
+    } else if (tokens.length !== 1) throw new Error(invalidFormatError);
+    let relationPath = tokens[0];
+
+    // If alias not given then generate it.
+    if (relationAlias == null) {
+      // Build the alias.
+      let aliasTokens = relationPath.split('.');
+      if (aliasTokens.length < 1) throw new Error(`Invalid relation name '${relationPath}'.`);
+      for (let i = 1; i < aliasTokens.length; i++) {
+        let token = aliasTokens[i];
+        token = token.substr(0, 1).toUpperCase() + token.substr(1);
+        aliasTokens[i] = token;
+      }
+      aliasTokens.push(globalOptions.withCountSuffix);
+      relationAlias = aliasTokens.join('');
+    }
+
+    return {
+      relationPath: relationPath,
+      relationAlias: relationAlias,
+    };
+  }
+
   /**
    * @param {object|string|string[]} relationNames An object where keys are relation names and values are subquery functions or null.
    * Can also be a single relations name or an array of relation names.
@@ -933,29 +1000,25 @@ module.exports = function(Bookshelf, options) {
     let withRelated = formatWiths(relationNames, signleRelationSubquery);
 
     // Prepare all relations.
-    for (let relationName in withRelated) {
-      if (!withRelated.hasOwnProperty(relationName)) continue;
+    for (let relationText in withRelated) {
+      if (!withRelated.hasOwnProperty(relationText)) continue;
 
-      // Check if the relationName is string.
-      if (!isString(relationName))
+      // Check if the relationText is string.
+      if (!isString(relationText))
         throw new Error('Must pass an object, string or an array of strings ' +
           'for the relationNames argument.');
 
-      // Split relation name by . (dots) to handle nested/sub relations.
-      let tokens = relationName.split('.');
-
-      // Check if we have at least one token.
-      if (tokens.length < 1) throw new Error('Invalid relation name.');
-
-      // Pick the first relation name.
-      let firstRelationName = tokens[0];
+      // Parse relation text;
+      let {firstRelationName, firstRelationAlias, hasSubRelation, subRelationText} = parseWithRelation(relationText);
+      let relationKey = firstRelationName;
+      if (firstRelationName !== firstRelationAlias) relationKey += ` as ${firstRelationAlias}`;
 
       // Get the relation and relationData.
       let relation = this.getRelation(firstRelationName).toModel();
       let relatedData = relation.relatedData;
 
       // Check if this relation already exists in the withs => if not then create a new related query.
-      if (!(firstRelationName in this.eloquent.withs)) {
+      if (!(relationKey in this.eloquent.withs)) {
         // Check if this is a supported relation
         if ((relatedData.type !== 'belongsToMany') &&
           (relatedData.type !== 'belongsTo') &&
@@ -965,24 +1028,19 @@ module.exports = function(Bookshelf, options) {
             ' not supported/implemented for the with statement.');
 
         // Add this relation to the withs.
-        this.eloquent.withs[firstRelationName] = relation;
+        this.eloquent.withs[relationKey] = relation;
       }
 
       // Get the related query.
-      let relatedQuery = this.eloquent.withs[firstRelationName];
+      let relatedQuery = this.eloquent.withs[relationKey];
 
       // Get the callback.
-      let callback = withRelated[relationName];
+      let callback = withRelated[relationText];
 
       // Check if tihs is the leaf relation/token.
-      if (tokens.length > 1) {
-        // This is not the leaf relation/token => pass the callback to the next relation/token
-        // remove the firs token from tokens and join the tokens together into a subRelationName
-        tokens.shift();
-        let subRelationName = tokens.join('.');
-
-        // Pass the callback to the next relation/token.
-        relatedQuery.with(subRelationName, callback);
+      if (hasSubRelation) {
+        // This is not the leaf relation/token => pass the callback to the next sub relation/token.
+        relatedQuery.with(subRelationText, callback);
       } else {
         // This is the leaf relation/token => apply the callback.
         // Check if the callback is a function.
@@ -1110,42 +1168,34 @@ module.exports = function(Bookshelf, options) {
     let withRelated = formatWiths(relationNames, signleRelationSubquery);
 
     // Loop through all the relation names. Build the select queries.
-    for (let relationPath in withRelated) {
-      if (!withRelated.hasOwnProperty(relationPath)) continue;
+    for (let relationText in withRelated) {
+      if (!withRelated.hasOwnProperty(relationText)) continue;
 
       // Check if the relationName is string.
-      if (!isString(relationPath))
+      if (!isString(relationText))
         throw new Error('Must pass an object, string or an array of strings ' +
           'for the relationNames argument.');
 
       // Get the callback.
+      let {relationPath, relationAlias} = parseWithCountRelation(relationText)
       let callback = withRelated[relationPath];
 
       // Async wrapper.
-      let withCountSubQueryTask = (async(Model, relationPath, callback) => {
+      let withCountSubQueryTask = (async(Model, relationPath, relationAlias, callback) => {
         // Build the withCount sub query.
         let subQuery = await withCountSubQuery(Model, Model.tableName,
           relationPath, Model.tableName);
-
-        // Build the alias.
-        let tokens = relationPath.split('.');
-        for (let i = 1; i < tokens.length; i++) {
-          let token = tokens[i];
-          token = token.substr(0, 1).toUpperCase() + token.substr(1);
-          tokens[i] = token;
-        }
-        tokens.push(globalOptions.withCountSuffix);
 
         // Check if the callback is a function and apply the callback.
         if (isFunction(callback)) callback(subQuery);
 
         // Add to select
         subQuery = (await subQuery.fakeSync())
-          .query.count('*').as(tokens.join(''));
+          .query.count('*').as(relationAlias);
 
         // Wrap the result into an object to prevent execution on await.
         return {query: subQuery};
-      })(this, relationPath, callback);
+      })(this, relationPath, relationAlias, callback);
 
       // Push the task to the withCount array.
       this.eloquent.withCountColumnsAsync.push(withCountSubQueryTask);
@@ -1310,7 +1360,7 @@ module.exports = function(Bookshelf, options) {
       let tokens = relationName.split('.');
 
       // Check if we have at least one token.
-      if (tokens.length < 1) throw new Error('Invalid relation name.');
+      if (tokens.length < 1) throw new Error(`Invalid relation name '${relationName}' passed to the has function.`);
 
       // Pick the first relation name.
       let firstRelationName = tokens[0];

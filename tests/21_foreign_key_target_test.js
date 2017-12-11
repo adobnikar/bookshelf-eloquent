@@ -15,13 +15,14 @@ exports.test = async function() {
   rawPosts = rawPosts.toJSON();
   rawPosts = groupBy(rawPosts, 'createdById');
 
-  let posts = await Post.withSelect('relatedPosts', 'postIdAttr').withCount('relatedPosts').get();
+  let posts = await Post.withSelect('relatedPosts', 'postIdAttr').withCount('relatedPosts as rpCount').withCount('relatedPosts').get();
   posts = posts.toJSON();
 
   for (let post of posts) {
     let rawPostGroup = rawPosts[post.createdById].map(p => p.postIdAttr);
     let relatedPosts = post.relatedPosts.map(p => p.postIdAttr);
     assert.deepEqual(relatedPosts, rawPostGroup);
+    assert.equal(post.rpCount, rawPostGroup.length)
     assert.equal(post.relatedPostsCount, rawPostGroup.length)
   }
 

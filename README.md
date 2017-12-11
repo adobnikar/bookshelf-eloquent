@@ -361,11 +361,11 @@ For the detailed documentation you can checkout the [Knex documentation](http://
 ## With (Eager loading)
 
 - **.with(withRelated, [signleRelationSubquery])** → Bookshelf  model (this) / function is chainable
-    - {string|string[]|object} `withRelated` - A relation, or list of relations, to be eager loaded as part of the fetch operation (either one or more relation names or objects mapping relation names to subquery callbacks),
+    - {string|string[]|object} `withRelated` - A relation (with an optional alias), or list of relations, to be eager loaded as part of the fetch operation (either one or more relation names or objects mapping relation names to subquery callbacks),
     - {function} `[signleRelationSubquery]` - If the `withRelated` parameter is a single relation (string) you can pass the it's subquery callback to this parameter.
 
 - **.withSelect(relationName, columns, [subquery])** → Bookshelf  model (this) / function is chainable
-    - {string} `relationName` - Name of the relation that you want to eager load.
+    - {string} `relationName` - Name of the relation (with an optional alias) that you want to eager load.
     - {string|string[]} `columns` - List of columns on the related model that we want to get from database.
     - {function} `[subquery]` - Optional nested query callback.
 
@@ -375,9 +375,9 @@ Require the user model.
 ```javascript
 const User = require('../models/user');
 ```
-- Simple eager loading example. Get all users with their posts and comments.
+- Simple eager loading example. Get all users with their posts and comments (in this example aliases are used but they are optional).
     ```javascript
-    var users = await User.with('posts.comments').get();
+    var users = await User.with('posts.comments as postsAlias.commentsAlias').get();
     ```
 - Get all users with their posts and comments and only select the 'text' column of the comments.
     ```javascript
@@ -418,7 +418,7 @@ Select only the 'text' and 'createdById' columns of posts and the usernames of c
 If you want to count the number of results from a relationship without actually loading them you may use the withCount method, which will place a {camelCaseRelation}Count column on your resulting models.
 
 - **.withCount(withRelated, [signleRelationSubquery])** → Bookshelf  model (this) / function is chainable
-    - {object|string|string[]} `withRelated` An object where keys are relation names and their values are subquery functions (if you don't want to specify a subquery function you can set the value to null instead). Can also be a single relations name (string) or an array of relation names (string[]).
+    - {object|string|string[]} `withRelated` An object where keys are relation names and their values are subquery functions (if you don't want to specify a subquery function you can set the value to null instead). Can also be a single relations name with an optional alias (string) or an array of relation names (string[]).
     - {function} [signleRelationSubquery] If the `withRelated` parameter is a single relation (string) you can pass the it's subquery callback to this parameter.
 
 **Examples:**
@@ -427,16 +427,16 @@ Require the user model.
 ```javascript
 const User = require('../models/user');
 ```
-- Get all users with their post counts. Select only the 'id' and 'postsCount'.
+- Get all users with their post counts. Select only the 'id' and posts count as 'postsCountAlias' (Alias is optional - by default the generated attribute would be 'postsCount').
     ```javascript
-    var users = await User.select('id').withCount('posts').get();
+    var users = await User.select('id').withCount('posts as postsCountAlias').get();
     console.log(users.toJSON());
     ```
     prints:
     ```
     [
-        {'id': 1, 'postsCount': 7},
-        {'id': 2, 'postsCount': 3},
+        {'id': 1, 'postsCountAlias': 7},
+        {'id': 2, 'postsCountAlias': 3},
         ...
     ]
     ```
