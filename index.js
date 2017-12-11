@@ -2141,12 +2141,12 @@ module.exports = function(Bookshelf, options) {
     // Check if all models were matched to their ids.
     for (let model of insertCollection.models) {
       if (model.isNew())
-        throw new Error('Ids of all models could not be retrieved. ' +
+        throw new Error('Error reason 1: Ids of all models could not be retrieved. ' +
           'Values that you have inserted got distorted because they were ' +
           'too precise. Example: When DateTime is stored to the database the ' +
           'miliseconds could get rounded to the closest second. ' +
           'Please consider re-formatting such columns before inserting them ' +
-          'to the database.');
+          'to the database.\nError reason 2: A unique key possibly prevented the insertion of rows into the database.');
     }
 
     // finally return the original collection
