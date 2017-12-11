@@ -7,7 +7,7 @@ require('./post');
 
 module.exports = Bookshelf.model('Comment', {
   tableName: 'comments',
-  idAttribute: 'idAttr',
+  idAttribute: 'commentIdAttr',
   hasTimestamps: ['createdAt', 'updatedAt'],
   hidden: [
     'deletedAt',

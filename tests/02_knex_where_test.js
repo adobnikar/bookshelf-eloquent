@@ -49,14 +49,14 @@ exports.test = async function() {
     this.where('title', 'like', 'a%');
     this.whereNull('deletedAt');
   }).orWhere('text', 'like', 'm%')
-  .whereIn('idAttr', [1, 2, 3, 4, 5, 6, 7, 8, 9])
-  .whereBetween('idAttr', [5, 15])).map(resetProto);
+  .whereIn(Post.forge().idAttribute, [1, 2, 3, 4, 5, 6, 7, 8, 9])
+  .whereBetween(Post.forge().idAttribute, [5, 15])).map(resetProto);
   bookResult = (await Post.withDeleted().where(function() {
     this.where('title', 'like', 'a%');
     this.whereNull('deletedAt');
   }).orWhereLike('text', 'm%')
-  .whereIn('idAttr', [1, 2, 3, 4, 5, 6, 7, 8, 9])
-  .whereBetween('idAttr', 5, 15).get()).models.map(modelAttrs);
+  .whereIn(Post.forge().idAttribute, [1, 2, 3, 4, 5, 6, 7, 8, 9])
+  .whereBetween(Post.forge().idAttribute, 5, 15).get()).models.map(modelAttrs);
   assert.deepStrictEqual(bookResult, knexResult);
 
   const whereMethods = ['orWhere', 'whereNot', 'whereIn', 'whereNotIn',

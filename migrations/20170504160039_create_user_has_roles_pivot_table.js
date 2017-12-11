@@ -5,7 +5,7 @@ exports.up = async function(knex, Promise) {
     table.charset('utf8');
     table.collate('utf8_unicode_ci');
 
-    table.integer('userId').unsigned().notNullable().references('users.idAttr').onUpdate('CASCADE').onDelete('CASCADE');
+    table.integer('userId').unsigned().notNullable().references('users.userIdAttr').onUpdate('CASCADE').onDelete('CASCADE');
     table.integer('roleId').unsigned().notNullable().references('roles.idAttr').onUpdate('CASCADE').onDelete('CASCADE');
     table.primary(['userId', 'roleId']);
   });

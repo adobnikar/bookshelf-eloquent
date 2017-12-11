@@ -7,7 +7,7 @@ exports.up = async function(knex, Promise) {
 
     table.increments('idAttr').unsigned().primary();
     table.dateTime('approvedAt').nullable().index();
-    table.integer('userId').unsigned().notNullable().references('users.idAttr').onUpdate('CASCADE').onDelete('CASCADE');
+    table.integer('userId').unsigned().notNullable().references('users.userIdAttr').onUpdate('CASCADE').onDelete('CASCADE');
     table.integer('groupId').unsigned().notNullable().references('groups.idAttr').onUpdate('CASCADE').onDelete('CASCADE');
 
     // Timestamps.

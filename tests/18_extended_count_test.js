@@ -26,10 +26,10 @@ exports.test = async function() {
   let postsWithTagsCountTest = 0;
   for (let post of posts) {
     if (post.tags.length > 0) postsWithTagsCountTest++;
-    for (let tag of post.tags) tagsIds.add(tag.idAttr);
+    for (let tag of post.tags) tagsIds.add(tag.id);
 
     let postTagsCount = await Tag.whereHas('posts', (sq) => {
-      sq.whereIn('idAttr', [post.idAttr]);
+      sq.whereIn('postIdAttr', [post.postIdAttr]);
     }).count();
     assert.equal(post.tags.length, postTagsCount);
   }
@@ -39,10 +39,10 @@ exports.test = async function() {
   let tagsWithPostsCountTest = 0;
   for (let tag of tags) {
     if (tag.posts.length > 0) tagsWithPostsCountTest++;
-    for (let post of tag.posts) postsIds.add(post.idAttr);
+    for (let post of tag.posts) postsIds.add(post.postIdAttr);
 
     let tagPostsCount = await Post.whereHas('tags', (sq) => {
-      sq.whereIn('idAttr', [tag.idAttr]);
+      sq.whereIn('id', [tag.id]);
     }).count();
     assert.equal(tag.posts.length, tagPostsCount);
   }
@@ -78,11 +78,11 @@ exports.test = async function() {
   postsWithTagsCountTest = 0;
   for (let post of posts) {
     if (post.tags.length > 0) postsWithTagsCountTest++;
-    for (let tag of post.tags) tagsIds.add(tag.idAttr);
+    for (let tag of post.tags) tagsIds.add(tag.id);
 
     let postTagsCount = await Tag.whereHas('posts', (sq) => {
       sq.withDeleted();
-      sq.whereIn('idAttr', [post.idAttr]);
+      sq.whereIn('postIdAttr', [post.postIdAttr]);
     }).count();
     assert.equal(post.tags.length, postTagsCount);
   }
@@ -92,10 +92,10 @@ exports.test = async function() {
   tagsWithPostsCountTest = 0;
   for (let tag of tags) {
     if (tag.posts.length > 0) tagsWithPostsCountTest++;
-    for (let post of tag.posts) postsIds.add(post.idAttr);
+    for (let post of tag.posts) postsIds.add(post.postIdAttr);
 
     let tagPostsCount = await Post.withDeleted().whereHas('tags', (sq) => {
-      sq.whereIn('idAttr', [tag.idAttr]);
+      sq.whereIn('id', [tag.id]);
     }).count();
     assert.equal(tag.posts.length, tagPostsCount);
   }

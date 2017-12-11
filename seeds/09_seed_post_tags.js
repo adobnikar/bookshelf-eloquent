@@ -10,8 +10,8 @@ exports.seed = async function(knex, Promise) {
   let rng = new Math.seedrandom('Xmy9WA5D8glX8fIif0LcZhrB4MtKygbY9JnRPQe36CWJHmI07U');
 
   // Get all users and posts.
-  let tags = (await Tag.select('idAttr').get()).toJSON();
-  let posts = await Post.select('idAttr').withDeleted().get();
+  let tags = (await Tag.select('id').get()).toJSON();
+  let posts = await Post.select('postIdAttr').withDeleted().get();
 
   // Remove one random post.
   posts.models.splice(rng.int(posts.models.length), 1);
@@ -24,7 +24,7 @@ exports.seed = async function(knex, Promise) {
     while (tagCount > 0) {
       tagCount--;
       let tag = tagsClone.splice(rng.int(tagsClone.length), 1)[0];
-      tagIds.push(tag.idAttr);
+      tagIds.push(tag.id);
     }
     await post.tags().attach(tagIds);
   }

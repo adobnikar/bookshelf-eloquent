@@ -656,12 +656,12 @@ module.exports = function(Bookshelf, options) {
     delete relatedQuery.relatedData;
 
     // get the columns
-    let relatedFkAttribute = rd.foreignKey;
+    let relatedFkAttribute = rd.key('foreignKey');
     let relatedIdAttribute = rd.targetIdAttribute;
 
     // build the pivot table query
-    let pivotQuery = knex.select([rd.foreignKey, rd.otherKey])
-      .from(rd.joinTableName).whereIn(rd.foreignKey, ids);
+    let pivotQuery = knex.select([rd.key('foreignKey'), rd.otherKey])
+      .from(rd.joinTableName).whereIn(rd.key('foreignKey'), ids);
 
     // fetch from pivot table
     let pivotRows = await pivotQuery;
@@ -670,7 +670,7 @@ module.exports = function(Bookshelf, options) {
     let foreignKeyIndex = new Map();
     let otherKeySet = new Set();
     for (let pivotRow of pivotRows) {
-      let foreignKeyValue = pivotRow[rd.foreignKey];
+      let foreignKeyValue = pivotRow[rd.key('foreignKey')];
       if (foreignKeyValue === null) continue;
       let otherKeyValue = pivotRow[rd.otherKey];
       if (otherKeyValue === null) continue;
@@ -744,7 +744,7 @@ module.exports = function(Bookshelf, options) {
     delete relatedQuery.relatedData;
 
     // get the columns
-    let relatedFkAttribute = rd.foreignKey;
+    let relatedFkAttribute = rd.key('foreignKey');
     let relatedIdAttribute = rd.targetIdAttribute;
 
     // apply the whereIn constraint to the relatedQuery
@@ -807,7 +807,7 @@ module.exports = function(Bookshelf, options) {
     delete relatedQuery.relatedData;
 
     // get the columns
-    let relatedFkAttribute = rd.foreignKey;
+    let relatedFkAttribute = rd.key('foreignKey');
     let relatedIdAttribute = rd.targetIdAttribute;
 
     // build the fk ids array
@@ -1057,28 +1057,28 @@ module.exports = function(Bookshelf, options) {
       case 'belongsToMany':
         // HasMany part.
         if (isString(subquery))
-          subquery = knex.raw('(??.??)', [subquery, Model.idAttribute]);
-        else subquery = subquery.select(Model.idAttribute);
+          subquery = knex.raw('(??.??)', [subquery, rd.parentIdAttribute]);
+        else subquery = subquery.select(rd.parentIdAttribute);
 
         // Pivot table part.
         subquery = knex.select(rd.otherKey)
           .from(rd.joinTableName)
-          .whereIn(rd.foreignKey, subquery);
+          .whereIn(rd.key('foreignKey'), subquery);
 
         // BelongsTo part.
         bookQuery.whereIn(rd.targetIdAttribute, subquery);
         break;
       case 'hasMany':
         if (isString(subquery))
-          subquery = knex.raw('(??.??)', [subquery, Model.idAttribute]);
-        else subquery = subquery.select(Model.idAttribute);
-        bookQuery.whereIn(rd.foreignKey, subquery);
+          subquery = knex.raw('(??.??)', [subquery, rd.parentIdAttribute]);
+        else subquery = subquery.select(rd.parentIdAttribute);
+        bookQuery.whereIn(rd.key('foreignKey'), subquery);
         break;
       case 'belongsTo':
       case 'hasOne':
         if (isString(subquery))
-          subquery = knex.raw('??.??', [subquery, rd.foreignKey]);
-        else subquery = subquery.select(rd.foreignKey);
+          subquery = knex.raw('??.??', [subquery, rd.key('foreignKey')]);
+        else subquery = subquery.select(rd.key('foreignKey'));
         bookQuery.whereIn(rd.targetIdAttribute, subquery);
         break;
       default:

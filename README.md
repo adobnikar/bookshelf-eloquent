@@ -8,7 +8,7 @@ Bookshelf is a JavaScript ORM for Node.js, built on the [Knex](http://knexjs.org
 ## Requirements
 
 - requires **node v7.6.0** or higher for ES2015 and async function support,
-- all the documented functions have been tested on **Bookshelf 0.10.4, 0.10.3** and **MySQL**.
+- all the documented functions have been tested on **Bookshelf 0.12.0, 0.10.4, 0.10.3** and **MySQL**.
 
 ## Installation
 

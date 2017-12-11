@@ -12,7 +12,7 @@ require('./rating');
 
 module.exports = Bookshelf.model('UserVirtuals', {
   tableName: 'users',
-  idAttribute: 'idAttr',
+  idAttribute: 'userIdAttr',
   hasTimestamps: ['createdAt', 'updatedAt'],
   hidden: [
     'password',

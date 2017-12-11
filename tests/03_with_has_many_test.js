@@ -82,11 +82,11 @@ exports.test = async function() {
     });
 
   for (let user of knexResult) {
-    if (knexResultPost.has(user.idAttr)) user.posts = knexResultPost.get(user.idAttr);
+    if (knexResultPost.has(user.userIdAttr)) user.posts = knexResultPost.get(user.userIdAttr);
     else user.posts = [];
     for (let post of user.posts) {
-      if (knexResultComments.has(post.idAttr))
-        post.comments = knexResultComments.get(post.idAttr);
+      if (knexResultComments.has(post.postIdAttr))
+        post.comments = knexResultComments.get(post.postIdAttr);
       else post.comments = [];
     }
   }
@@ -116,11 +116,11 @@ exports.test = async function() {
     });
 
   for (let user of knexResult) {
-    if (knexResultPost.has(user.idAttr)) user.posts = knexResultPost.get(user.idAttr);
+    if (knexResultPost.has(user.userIdAttr)) user.posts = knexResultPost.get(user.userIdAttr);
     else user.posts = [];
     for (let post of user.posts) {
-      if (knexResultComments.has(post.idAttr))
-        post.comments = knexResultComments.get(post.idAttr);
+      if (knexResultComments.has(post.postIdAttr))
+        post.comments = knexResultComments.get(post.postIdAttr);
       else post.comments = [];
     }
   }
@@ -134,7 +134,7 @@ exports.test = async function() {
   knexResult = (await knex.select().from(User.prototype.tableName)
     .whereNull('deletedAt')).map(bookify(User));
   knexResultPost = new Map();
-  (await knex.select(['idAttr', 'text', 'createdById'])
+  (await knex.select(['postIdAttr', 'text', 'createdById'])
     .from(Post.prototype.tableName)
     .whereNull('deletedAt')
     .where('title', 'not like', 'a%'))
@@ -154,16 +154,16 @@ exports.test = async function() {
     });
 
   for (let user of knexResult) {
-    if (knexResultPost.has(user.idAttr)) user.posts = knexResultPost.get(user.idAttr);
+    if (knexResultPost.has(user.userIdAttr)) user.posts = knexResultPost.get(user.userIdAttr);
     else user.posts = [];
     for (let post of user.posts) {
-      if (knexResultComments.has(post.idAttr))
-        post.comments = knexResultComments.get(post.idAttr);
+      if (knexResultComments.has(post.postIdAttr))
+        post.comments = knexResultComments.get(post.postIdAttr);
       else post.comments = [];
     }
   }
 
-  bookResult = (await User.withSelect('posts', ['idAttr', 'text'], (q) => {
+  bookResult = (await User.withSelect('posts', ['postIdAttr', 'text'], (q) => {
     q.whereNotLike('title', 'a%');
     q.withSelect('comments', 'text');
   }).get())

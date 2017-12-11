@@ -9,7 +9,7 @@ require('./rating');
 
 module.exports = Bookshelf.model('Post', {
   tableName: 'posts',
-  idAttribute: 'idAttr',
+  idAttribute: 'postIdAttr',
   hasTimestamps: ['createdAt', 'updatedAt'],
   hidden: [
     'deletedAt',
@@ -30,5 +30,9 @@ module.exports = Bookshelf.model('Post', {
 
   tags: function() {
     return this.belongsToMany('Tag', 'post_has_tags', 'postId', 'tagId');
+  },
+
+  relatedPosts: function() {
+    return this.hasMany('Post', 'createdById', 'createdById');
   },
 });

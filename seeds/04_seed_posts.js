@@ -13,7 +13,7 @@ exports.seed = async function(knex, Promise) {
   let rng = new Math.seedrandom('3ZJpEGPGisMIfy7pocrkFOD0v7V4G0KmJBxk0KwtW8O1SiHmfO');
 
   // Get all users.
-  let users = (await User.select('idAttr').get()).toJSON();
+  let users = (await User.select('userIdAttr').get()).toJSON();
 
   // Seed faker.
   faker.seed(rng.int(1000000));
@@ -35,7 +35,7 @@ exports.seed = async function(knex, Promise) {
       title: faker.lorem.sentence(),
       visible: (rng.int(5) === 1) ? false : true, // A random chance this post is not visible/published.
       text: faker.lorem.paragraphs(),
-      createdById: user.idAttr,
+      createdById: user.userIdAttr,
       deletedAt: (rng.int(5) === 1) ? (new Date()) : null, // A random chance this post was deleted.
     });
   }

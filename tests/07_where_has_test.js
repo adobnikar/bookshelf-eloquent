@@ -22,6 +22,8 @@ const Tag = require('../models/tag');
 const User = require('../models/user');
 const Empty = require('../models/empty');
 
+const Person = require('../models/person');
+
 function modelAttrs(model) {
   return model.attributes;
 }
@@ -95,14 +97,14 @@ exports.test = async function() {
   let comments = Comment.prototype.tableName;
   let users = User.prototype.tableName;
   let friends = Friend.prototype.tableName;
-  let usersId = User.prototype.idAttribute;
+  let usersId = User.forge().idAttribute;
   let userHasRole = User.prototype.roles().relatedData;
   let roles = Role.prototype.tableName;
   let rolesId = Role.prototype.idAttribute;
   let roleHasRoles = Role.prototype.roles().relatedData;
   let tags = Tag.prototype.tableName;
   let posts = Post.prototype.tableName;
-  let postsId = Post.prototype.idAttribute;
+  let postsId = Post.forge().idAttribute;
   let postHasTags = Post.prototype.tags().relatedData;
 
   // Select user which have at least one post.
@@ -110,40 +112,43 @@ exports.test = async function() {
     .withDeleted().get()).toJSON();
   let usersIndex = new Map();
   let bookUsers = (await User.whereHas('posts').get()).toJSON().map((e) => {
-    usersIndex.set(e.idAttr, e);
+    usersIndex.set(e[usersId], e);
   });
   for (let user of bookUsersAll) {
     assert.equal(user.postsCount > 0 && (user.deletedAt !== null),
-      usersIndex.has(user.idAttr));
+      usersIndex.has(user[usersId]));
   }
 
+  assert.equal((await Person.has('dogs').buildQuery()).query.toString(),
+    'select `person`.* from `person` where (exists (select * from `dog` where `person_idAttr` in (`person`.`idAttr`) and `dog`.`deletedAt` is null)) and `person`.`deletedAt` is null');
+
   assert.equal((await User.has('posts').buildQuery()).query.toString(),
-    'select `users`.* from `users` where (exists (select * from `posts` where `createdById` in (`users`.`idAttr`) and `posts`.`deletedAt` is null)) and `users`.`deletedAt` is null');
+    'select `users`.* from `users` where (exists (select * from `posts` where `createdById` in (`users`.`userIdAttr`) and `posts`.`deletedAt` is null)) and `users`.`deletedAt` is null');
 
   assert.equal((await User.has('posts', '>=', 5).buildQuery()).query.toString(),
-    'select `users`.* from `users` where ((select count(*) from `posts` where `createdById` in (`users`.`idAttr`) and `posts`.`deletedAt` is null) >= 5) and `users`.`deletedAt` is null');
+    'select `users`.* from `users` where ((select count(*) from `posts` where `createdById` in (`users`.`userIdAttr`) and `posts`.`deletedAt` is null) >= 5) and `users`.`deletedAt` is null');
 
   assert.equal((await User.has('posts.comments').buildQuery()).query.toString(),
-    'select `users`.* from `users` where (exists (select * from `comments` where `postId` in (select `idAttr` from `posts` where `createdById` in (`users`.`idAttr`) and `posts`.`deletedAt` is null) and `comments`.`deletedAt` is null)) and `users`.`deletedAt` is null');
+    'select `users`.* from `users` where (exists (select * from `comments` where `postId` in (select `postIdAttr` from `posts` where `createdById` in (`users`.`userIdAttr`) and `posts`.`deletedAt` is null) and `comments`.`deletedAt` is null)) and `users`.`deletedAt` is null');
 
   assert.equal((await User.whereHas('posts', (q) => {
     q.where('title', 'like', 'foo%');
   }).buildQuery()).query.toString(),
-    'select `users`.* from `users` where (exists (select * from `posts` where `createdById` in (`users`.`idAttr`) and `title` like \'foo%\' and `posts`.`deletedAt` is null)) and `users`.`deletedAt` is null');
+    'select `users`.* from `users` where (exists (select * from `posts` where `createdById` in (`users`.`userIdAttr`) and `title` like \'foo%\' and `posts`.`deletedAt` is null)) and `users`.`deletedAt` is null');
 
   assert.equal((await User.whereHas('posts', (q) => {
     q.where('title', 'like', 'foo%');
   }, '>=', 5).buildQuery()).query.toString(),
-    'select `users`.* from `users` where ((select count(*) from `posts` where `createdById` in (`users`.`idAttr`) and `title` like \'foo%\' and `posts`.`deletedAt` is null) >= 5) and `users`.`deletedAt` is null');
+    'select `users`.* from `users` where ((select count(*) from `posts` where `createdById` in (`users`.`userIdAttr`) and `title` like \'foo%\' and `posts`.`deletedAt` is null) >= 5) and `users`.`deletedAt` is null');
 
   assert.equal((await User.whereHas('posts.comments', (q) => {
     q.where('text', 'like', 'bar%');
   }).buildQuery()).query.toString(),
-    'select `users`.* from `users` where (exists (select * from `comments` where `postId` in (select `idAttr` from `posts` where `createdById` in (`users`.`idAttr`) and `posts`.`deletedAt` is null) and `text` like \'bar%\' and `comments`.`deletedAt` is null)) and `users`.`deletedAt` is null');
+    'select `users`.* from `users` where (exists (select * from `comments` where `postId` in (select `postIdAttr` from `posts` where `createdById` in (`users`.`userIdAttr`) and `posts`.`deletedAt` is null) and `text` like \'bar%\' and `comments`.`deletedAt` is null)) and `users`.`deletedAt` is null');
 
   assert.equal((await User.whereHas('posts', (q) => {
     q.where('title', 'like', 'foo%');
     q.has('comments');
   }).buildQuery()).query.toString(),
-    'select `users`.* from `users` where (exists (select * from `posts` where `createdById` in (`users`.`idAttr`) and `title` like \'foo%\' and (exists (select * from `comments` where `postId` in (`posts`.`idAttr`) and `comments`.`deletedAt` is null)) and `posts`.`deletedAt` is null)) and `users`.`deletedAt` is null');
+    'select `users`.* from `users` where (exists (select * from `posts` where `createdById` in (`users`.`userIdAttr`) and `title` like \'foo%\' and (exists (select * from `comments` where `postId` in (`posts`.`postIdAttr`) and `comments`.`deletedAt` is null)) and `posts`.`deletedAt` is null)) and `users`.`deletedAt` is null');
 };
