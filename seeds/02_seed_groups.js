@@ -21,15 +21,15 @@ exports.seed = async function(knex, Promise) {
   groupCollection = Group.collection();
 
   // Get the super admin.
-  let superAdmin = (await User.select(['idAttr'])
+  let superAdmin = (await User.select(['userIdAttr'])
     .where('username', 'admin.super').first()).toJSON();
 
   // Create groups.
-  let groupBiology = await createGroup('Biology', superAdmin.idAttr);
-  let groupMathematics = await createGroup('Mathematics', superAdmin.idAttr);
-  let groupPhysics = await createGroup('Physics', superAdmin.idAttr);
-  let groupFirst = await createGroup('First', superAdmin.idAttr);
-  let groupSecond = await createGroup('Second', superAdmin.idAttr);
+  let groupBiology = await createGroup('Biology', superAdmin.userIdAttr);
+  let groupMathematics = await createGroup('Mathematics', superAdmin.userIdAttr);
+  let groupPhysics = await createGroup('Physics', superAdmin.userIdAttr);
+  let groupFirst = await createGroup('First', superAdmin.userIdAttr);
+  let groupSecond = await createGroup('Second', superAdmin.userIdAttr);
 
   await groupCollection.insert();
 };

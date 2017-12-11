@@ -12,15 +12,15 @@ exports.seed = async function(knex, Promise) {
   let rng = new Math.seedrandom('3ZJpEGPGisMIfy7pocrkFOD0v7V4G0KmJBxk0KwtW8O1SiHmfO');
 
   // Get all users.
-  let users = (await User.select('idAttr').get()).toJSON();
+  let users = (await User.select('userIdAttr').get()).toJSON();
 
   // Generate all possible friend pairs.
   let pairs = [];
   for (let i = 0; i < users.length - 1; i++) {
     for (let j = i + 1; j < users.length; j++) {
       pairs.push({
-        user1Id: users[i].idAttr,
-        user2Id: users[j].idAttr,
+        user1Id: users[i].userIdAttr,
+        user2Id: users[j].userIdAttr,
       });
     }
   }

@@ -9,7 +9,7 @@ exports.up = async function(knex, Promise) {
     table.string('name').nullable().unique();
     table.text('description').nullable();
     table.text('coverUrl').nullable();
-    table.integer('ownerId').unsigned().notNullable().references('users.idAttr').onUpdate('CASCADE').onDelete('RESTRICT');
+    table.integer('ownerId').unsigned().notNullable().references('users.userIdAttr').onUpdate('CASCADE').onDelete('RESTRICT');
 
     // Soft delete.
     table.dateTime('deletedAt').nullable().index();

@@ -6,8 +6,8 @@ exports.up = async function(knex, Promise) {
     table.collate('utf8_unicode_ci');
 
     table.increments('idAttr').unsigned().primary();
-    table.integer('user1Id').unsigned().notNullable().references('users.idAttr').onUpdate('CASCADE').onDelete('CASCADE');
-    table.integer('user2Id').unsigned().notNullable().references('users.idAttr').onUpdate('CASCADE').onDelete('CASCADE');
+    table.integer('user1Id').unsigned().notNullable().references('users.userIdAttr').onUpdate('CASCADE').onDelete('CASCADE');
+    table.integer('user2Id').unsigned().notNullable().references('users.userIdAttr').onUpdate('CASCADE').onDelete('CASCADE');
 
     // Timestamps.
     table.dateTime('createdAt').notNullable().defaultTo(knex.fn.now()).index();

@@ -78,14 +78,15 @@ exports.test = async function() {
   let bookResult = null;
 
   let users = User.prototype.tableName;
-  let usersId = User.prototype.idAttribute;
+  let usersId = User.forge().idAttribute;
   let userHasRole = User.prototype.roles().relatedData;
   let roles = Role.prototype.tableName;
   let rolesId = Role.prototype.idAttribute;
   let roleHasRoles = Role.prototype.roles().relatedData;
   let tags = Tag.prototype.tableName;
+  let tagsId = Tag.forge().idAttribute;
   let posts = Post.prototype.tableName;
-  let postsId = Post.prototype.idAttribute;
+  let postsId = Post.forge().idAttribute;
   let postHasTags = Post.prototype.tags().relatedData;
 
   knexResult = (await knex.select().from(users)
@@ -101,8 +102,8 @@ exports.test = async function() {
   let knexResultTags = new Map();
   (await knex.select().from(tags))
     .map(bookify(Tag)).map((e) => {
-      if (e.idAttr === null) return;
-      knexResultTags.set(e.idAttr, e);
+      if (e[tagsId] === null) return;
+      knexResultTags.set(e[tagsId], e);
     });
 
   let knexResultPost = new Map();
@@ -135,14 +136,14 @@ exports.test = async function() {
   });
 
   for (let user of knexResult) {
-    if (knexResultPost.has(user.idAttr)) user.posts = knexResultPost.get(user.idAttr);
+    if (knexResultPost.has(user[usersId])) user.posts = knexResultPost.get(user[usersId]);
     else user.posts = [];
-    if (knexResultUserHasRole.has(user.idAttr))
-      user.roles = resolve(knexResultRoles, knexResultUserHasRole.get(user.idAttr));
+    if (knexResultUserHasRole.has(user[usersId]))
+      user.roles = resolve(knexResultRoles, knexResultUserHasRole.get(user[usersId]));
     else user.roles = [];
     for (let post of user.posts) {
-      if (knexResultPostHasTags.has(post.idAttr))
-        post.tags = resolve(knexResultTags, knexResultPostHasTags.get(post.idAttr));
+      if (knexResultPostHasTags.has(post[postsId]))
+        post.tags = resolve(knexResultTags, knexResultPostHasTags.get(post[postsId]));
       else post.tags = [];
     }
     for (let role of user.roles) {
@@ -165,7 +166,7 @@ exports.test = async function() {
   assert.deepStrictEqual(bookResult, knexResult);
 
   // Nested with.
-  knexResult = (await knex.select(['idAttr', 'username']).from(users)
+  knexResult = (await knex.select([usersId, 'username']).from(users)
     .whereNull('deletedAt'))
     .map(bookify(User));
 
@@ -176,14 +177,14 @@ exports.test = async function() {
   });
 
   knexResultTags = new Map();
-  (await knex.select(['idAttr', 'name']).from(tags))
+  (await knex.select([tagsId, 'name']).from(tags))
     .map(bookify(Tag)).map((e) => {
-      if (e.idAttr === null) return;
-      knexResultTags.set(e.idAttr, e);
+      if (e[tagsId] === null) return;
+      knexResultTags.set(e[tagsId], e);
     });
 
   knexResultPost = new Map();
-  (await knex.select(['idAttr', 'text', 'createdById']).from(posts)
+  (await knex.select([postsId, 'text', 'createdById']).from(posts)
     .whereNull('deletedAt')
     .where('title', 'not like', 'a%'))
     .map(bookify(Post)).map((e) => {
@@ -213,14 +214,14 @@ exports.test = async function() {
   });
 
   for (let user of knexResult) {
-    if (knexResultPost.has(user.idAttr)) user.posts = knexResultPost.get(user.idAttr);
+    if (knexResultPost.has(user[usersId])) user.posts = knexResultPost.get(user[usersId]);
     else user.posts = [];
-    if (knexResultUserHasRole.has(user.idAttr))
-      user.roles = resolve(knexResultRoles, knexResultUserHasRole.get(user.idAttr));
+    if (knexResultUserHasRole.has(user[usersId]))
+      user.roles = resolve(knexResultRoles, knexResultUserHasRole.get(user[usersId]));
     else user.roles = [];
     for (let post of user.posts) {
-      if (knexResultPostHasTags.has(post.idAttr))
-        post.tags = resolve(knexResultTags, knexResultPostHasTags.get(post.idAttr));
+      if (knexResultPostHasTags.has(post[postsId]))
+        post.tags = resolve(knexResultTags, knexResultPostHasTags.get(post[postsId]));
       else post.tags = [];
     }
     for (let role of user.roles) {
@@ -238,8 +239,8 @@ exports.test = async function() {
   }
 
   knexResult = knexResult.map(removeProto);
-  bookResult = (await User.select(['idAttr', 'username']).with('posts', (q) => {
-    q.select(['idAttr', 'text']);
+  bookResult = (await User.select([usersId, 'username']).with('posts', (q) => {
+    q.select([postsId, 'text']);
     q.whereNotLike('title', 'a%');
     q.withSelect('tags', ['name']);
   }).with('roles', (q) => {

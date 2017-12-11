@@ -70,9 +70,9 @@ exports.test = async function() {
   assert.deepStrictEqual(bookResult, knexResult);
 
   // Select some attributes and idAttr.
-  knexResult = (await knex.select(['idAttr', 'text', 'postId'])
-    .from(Comment.prototype.tableName)).map(resetProto);
-  bookResult = (await Comment.select(['idAttr', 'text', 'postId'])
+  knexResult = (await knex.select([Comment.forge().idAttribute, 'text', 'postId'])
+    .from(Comment.forge().tableName)).map(resetProto);
+  bookResult = (await Comment.select([Comment.forge().idAttribute, 'text', 'postId'])
     .withDeleted().get()).models.map(modelAttrs);
   assert.deepStrictEqual(bookResult, knexResult);
 };
