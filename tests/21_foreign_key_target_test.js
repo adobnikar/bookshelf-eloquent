@@ -11,11 +11,15 @@ const Tag = require('../models/tag');
 const User = require('../models/user');
 
 exports.test = async function() {
-  let rawPosts = await Post.get();
+  let pqFilter = function(pq) {
+    pq.whereNotLike('text', 'd%');
+  };
+
+  let rawPosts = await Post.where(pqFilter).get();
   rawPosts = rawPosts.toJSON();
   rawPosts = groupBy(rawPosts, 'createdById');
 
-  let posts = await Post.withSelect('relatedPosts', 'postIdAttr').withCount('relatedPosts as rpCount').withCount('relatedPosts').get();
+  let posts = await Post.where(pqFilter).withSelect('relatedPosts', 'postIdAttr', pqFilter).withCount('relatedPosts as rpCount', pqFilter).withCount('relatedPosts', pqFilter).get();
   posts = posts.toJSON();
 
   for (let post of posts) {
@@ -30,7 +34,7 @@ exports.test = async function() {
   let resultsCount = 1;
   let minCount = 0;
   while (resultsCount > 0) {
-    let whereHasPosts = await Post.select('postIdAttr').has('relatedPosts', '>=', minCount).get();
+    let whereHasPosts = await Post.where(pqFilter).select('postIdAttr').whereHas('relatedPosts', pqFilter, '>=', minCount).get();
     whereHasPosts = whereHasPosts.toJSON().map(p => p.postIdAttr);
     let rawPosts = posts.filter(p => p.relatedPosts.length >= minCount).map(p => p.postIdAttr);
     assert.deepEqual(whereHasPosts, rawPosts);

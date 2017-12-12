@@ -1178,7 +1178,7 @@ module.exports = function(Bookshelf, options) {
 
       // Get the callback.
       let {relationPath, relationAlias} = parseWithCountRelation(relationText)
-      let callback = withRelated[relationPath];
+      let callback = withRelated[relationText];
 
       // Async wrapper.
       let withCountSubQueryTask = (async(Model, relationPath, relationAlias, callback) => {
