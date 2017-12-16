@@ -5,6 +5,7 @@ const knex = require('knex')(connection);
 
 const assert = require('assert');
 require('../libs/seedrandom-ext');
+const compare = require('../libs/comapre');
 
 const isArray = require('lodash/isArray');
 const isPlainObject = require('lodash/isPlainObject');
@@ -75,7 +76,9 @@ function resolve(map, keys) {
 exports.test = async function() {
   // Run the test. This function is required.
   let knexResult = null;
+  let knexResultOrdered = null;
   let bookResult = null;
+  let bookResultOrdered = null;
 
   let users = User.prototype.tableName;
   let usersId = User.forge().idAttribute;
@@ -92,12 +95,9 @@ exports.test = async function() {
   knexResult = (await knex.select().from(users)
     .whereNull('deletedAt'))
     .map(bookify(User));
-
-  let knexResultUserHasRole = new Map();
-  (await knex.select().from(userHasRole.joinTableName)).map((e) => {
-    knexResultUserHasRole.push(e[userHasRole.foreignKey],
-      e[userHasRole.otherKey]);
-  });
+  knexResultOrdered = (await knex.select().from(users)
+    .whereNull('deletedAt'))
+    .map(bookify(User));
 
   let knexResultTags = new Map();
   (await knex.select().from(tags))
@@ -116,11 +116,17 @@ exports.test = async function() {
       knexResultPost.get(e.createdById).push(e);
     });
 
+  let knexResultPostHasTagsOrdered = new Map();
   let knexResultPostHasTags = new Map();
   (await knex.select().from(postHasTags.joinTableName)).map((e) => {
-    knexResultPostHasTags.push(e[postHasTags.foreignKey],
+    knexResultPostHasTagsOrdered.push(e[postHasTags.foreignKey],
       e[postHasTags.otherKey]);
   });
+  // order
+  for (let [key, arr] of knexResultPostHasTagsOrdered) {
+    knexResultPostHasTagsOrdered.set(key, arr.sort((a, b) => a - b));
+    knexResultPostHasTags.set(key, Array.from(knexResultTags.values()).filter(t => arr.includes(t.id)).map(t => t.id));
+  }
 
   let knexResultRoles = new Map();
   (await knex.select().from(roles))
@@ -129,17 +135,37 @@ exports.test = async function() {
       knexResultRoles.set(e.idAttr, e);
     });
 
+  let knexResultRoleHasRolesOrdered = new Map();
   let knexResultRoleHasRoles = new Map();
   (await knex.select().from(roleHasRoles.joinTableName)).map((e) => {
-    knexResultRoleHasRoles.push(e[roleHasRoles.foreignKey],
+    knexResultRoleHasRolesOrdered.push(e[roleHasRoles.foreignKey],
       e[roleHasRoles.otherKey]);
   });
+  // order
+  for (let [key, arr] of knexResultRoleHasRolesOrdered) {
+    knexResultRoleHasRolesOrdered.set(key, arr.sort((a, b) => a - b));
+    knexResultRoleHasRoles.set(key, Array.from(knexResultRoles.values()).filter(r => arr.includes(r.idAttr)).map(r => r.idAttr));
+  }
+
+  let knexResultUserHasRoleOrderd = new Map();
+  let knexResultUserHasRole = new Map();
+  (await knex.select().from(userHasRole.joinTableName)).map((e) => {
+    knexResultUserHasRoleOrderd.push(e[userHasRole.foreignKey],
+      e[userHasRole.otherKey]);
+
+
+  });
+  // order
+  for (let [key, arr] of knexResultUserHasRoleOrderd) {
+    knexResultUserHasRoleOrderd.set(key, arr.sort((a, b) => a - b));
+    knexResultUserHasRole.set(key, Array.from(knexResultRoles.values()).filter(r => arr.includes(r.idAttr)).map(r => r.idAttr));
+  }
 
   for (let user of knexResult) {
     if (knexResultPost.has(user[usersId])) user.posts = knexResultPost.get(user[usersId]);
     else user.posts = [];
-    if (knexResultUserHasRole.has(user[usersId]))
-      user.roles = resolve(knexResultRoles, knexResultUserHasRole.get(user[usersId]));
+    if (knexResultUserHasRoleOrderd.has(user[usersId]))
+      user.roles = resolve(knexResultRoles, knexResultUserHasRoleOrderd.get(user[usersId]));
     else user.roles = [];
     for (let post of user.posts) {
       if (knexResultPostHasTags.has(post[postsId]))
@@ -159,11 +185,54 @@ exports.test = async function() {
       }
     }
   }
-
-  knexResult = knexResult.map(removeProto);
   bookResult = (await User.with(['posts.tags', 'roles.roles.roles']).get())
     .toJSON().map(removeProto);
+  knexResult = knexResult.map(removeProto);
+  compare.diff(bookResult, knexResult);
   assert.deepStrictEqual(bookResult, knexResult);
+
+  for (let user of knexResultOrdered) {
+    if (knexResultPost.has(user[usersId])) user.posts = knexResultPost.get(user[usersId]);
+    else user.posts = [];
+    if (knexResultUserHasRoleOrderd.has(user[usersId]))
+      user.roles = resolve(knexResultRoles, knexResultUserHasRoleOrderd.get(user[usersId]));
+    else user.roles = [];
+    for (let post of user.posts) {
+      if (knexResultPostHasTagsOrdered.has(post[postsId]))
+        post.tags = resolve(knexResultTags, knexResultPostHasTagsOrdered.get(post[postsId]));
+      else post.tags = [];
+    }
+    for (let role of user.roles) {
+      if (knexResultRoleHasRolesOrdered.has(role.idAttr))
+        role.roles = resolve(knexResultRoles,
+          knexResultRoleHasRolesOrdered.get(role.idAttr));
+      else role.roles = [];
+      for (let role2 of role.roles) {
+        if (knexResultRoleHasRolesOrdered.has(role2.idAttr))
+          role2.roles = resolve(knexResultRoles,
+            knexResultRoleHasRolesOrdered.get(role2.idAttr));
+        else role2.roles = [];
+      }
+    }
+  }
+
+  knexResultOrdered = knexResultOrdered.map(removeProto);
+  bookResultOrdered = (await User.with('posts', (pq) => {
+      //pq.orderBy('postIdAttr', 'asc');
+      pq.with('tags', (tq) => {
+        tq.orderBy('id', 'asc');
+      });
+    }).with('roles', (rq) => {
+      rq.orderBy('idAttr', 'asc');
+      rq.with('roles', (rq) => {
+        rq.orderBy('idAttr', 'asc');
+        rq.with('roles', (rq) => {
+          rq.orderBy('idAttr', 'asc');
+        });
+      });
+    }).get()).toJSON().map(removeProto);
+  compare.diff(bookResultOrdered, knexResultOrdered);
+  assert.deepStrictEqual(bookResultOrdered, knexResultOrdered);
 
   // Nested with.
   knexResult = (await knex.select([usersId, 'username']).from(users)
@@ -194,9 +263,9 @@ exports.test = async function() {
       knexResultPost.get(e.createdById).push(e);
     });
 
-  knexResultPostHasTags = new Map();
+  knexResultPostHasTagsOrdered = new Map();
   (await knex.select().from(postHasTags.joinTableName)).map((e) => {
-    knexResultPostHasTags.push(e[postHasTags.foreignKey],
+    knexResultPostHasTagsOrdered.push(e[postHasTags.foreignKey],
       e[postHasTags.otherKey]);
   });
 
@@ -207,9 +276,9 @@ exports.test = async function() {
       knexResultRoles.set(e.idAttr, e);
     });
 
-  knexResultRoleHasRoles = new Map();
+  knexResultRoleHasRolesOrdered = new Map();
   (await knex.select().from(roleHasRoles.joinTableName)).map((e) => {
-    knexResultRoleHasRoles.push(e[roleHasRoles.foreignKey],
+    knexResultRoleHasRolesOrdered.push(e[roleHasRoles.foreignKey],
       e[roleHasRoles.otherKey]);
   });
 
@@ -220,19 +289,19 @@ exports.test = async function() {
       user.roles = resolve(knexResultRoles, knexResultUserHasRole.get(user[usersId]));
     else user.roles = [];
     for (let post of user.posts) {
-      if (knexResultPostHasTags.has(post[postsId]))
-        post.tags = resolve(knexResultTags, knexResultPostHasTags.get(post[postsId]));
+      if (knexResultPostHasTagsOrdered.has(post[postsId]))
+        post.tags = resolve(knexResultTags, knexResultPostHasTagsOrdered.get(post[postsId]));
       else post.tags = [];
     }
     for (let role of user.roles) {
-      if (knexResultRoleHasRoles.has(role.idAttr))
+      if (knexResultRoleHasRolesOrdered.has(role.idAttr))
         role.roles = resolve(knexResultRoles,
-          knexResultRoleHasRoles.get(role.idAttr));
+          knexResultRoleHasRolesOrdered.get(role.idAttr));
       else role.roles = [];
       for (let role2 of role.roles) {
-        if (knexResultRoleHasRoles.has(role2.idAttr))
+        if (knexResultRoleHasRolesOrdered.has(role2.idAttr))
           role2.roles = resolve(knexResultRoles,
-            knexResultRoleHasRoles.get(role2.idAttr));
+            knexResultRoleHasRolesOrdered.get(role2.idAttr));
         else role2.roles = [];
       }
     }
@@ -242,13 +311,20 @@ exports.test = async function() {
   bookResult = (await User.select([usersId, 'username']).with('posts', (q) => {
     q.select([postsId, 'text']);
     q.whereNotLike('title', 'a%');
-    q.withSelect('tags', ['name']);
+    q.withSelect('tags', ['name'], (tq) => {
+      tq.orderBy('id', 'asc');
+    });
   }).with('roles', (q) => {
+    q.orderBy('idAttr', 'asc');
     q.select('name');
     q.withSelect('roles', ['name'], (q) => {
-      q.withSelect('roles', ['name']);
+      q.orderBy('idAttr', 'asc');
+      q.withSelect('roles', ['name'], (q) => {
+        q.orderBy('idAttr', 'asc');
+      });
     });
   }).get())
     .toJSON().map(removeProto);
+  compare.diff(bookResult, knexResult);
   assert.deepStrictEqual(bookResult, knexResult);
 };

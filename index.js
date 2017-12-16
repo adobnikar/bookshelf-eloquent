@@ -659,6 +659,23 @@ module.exports = function(Bookshelf, options) {
     let relatedFkAttribute = rd.key('foreignKey');
     let relatedIdAttribute = rd.targetIdAttribute;
 
+    // create relation on every model in the collection
+    let modelMap = new Map();
+    let {firstRelationName, firstRelationAlias} = parseWithRelation(withRelationText);
+    for (let model of collection.models) {
+      let modelId = model.attributes[rd.parentIdAttribute];
+      modelMap.set(modelId, model);
+
+      // add the relation
+      let newRelation = this.getRelation(firstRelationName);
+      newRelation.models = [];
+      newRelation._byId = {};
+      newRelation.length = 0;
+
+      // relations attribute should already exist on each model
+      model.relations[firstRelationAlias] = newRelation;
+    }
+
     // build the pivot table query
     let pivotQuery = knex.select([rd.key('foreignKey'), rd.otherKey])
       .from(rd.joinTableName).whereIn(rd.key('foreignKey'), ids);
@@ -667,22 +684,20 @@ module.exports = function(Bookshelf, options) {
     let pivotRows = await pivotQuery;
 
     // build foreignKey and otherKey indexes
-    let foreignKeyIndex = new Map();
-    let otherKeySet = new Set();
+    //let foreignKeyIndex = new Map();
+    let otherKeyIndex = new Map();
     for (let pivotRow of pivotRows) {
       let foreignKeyValue = pivotRow[rd.key('foreignKey')];
       if (foreignKeyValue === null) continue;
       let otherKeyValue = pivotRow[rd.otherKey];
       if (otherKeyValue === null) continue;
-      if (!foreignKeyIndex.has(foreignKeyValue))
-        foreignKeyIndex.set(foreignKeyValue, []);
-      foreignKeyIndex.get(foreignKeyValue).push(otherKeyValue);
-      otherKeySet.add(otherKeyValue);
+      if (!otherKeyIndex.has(otherKeyValue)) otherKeyIndex.set(otherKeyValue, []);
+      otherKeyIndex.get(otherKeyValue).push(foreignKeyValue);
     }
 
     // apply the whereIn constraint to the relatedQuery
     relatedQuery.eloquent.relationColumns.push(relatedIdAttribute);
-    relatedQuery.whereIn(relatedIdAttribute, Array.from(otherKeySet));
+    relatedQuery.whereIn(relatedIdAttribute, Array.from(otherKeyIndex.keys()));
 
     // fetch from related table
     let relatedModels = await relatedQuery.get();
@@ -700,40 +715,21 @@ module.exports = function(Bookshelf, options) {
               '" column to the select statement.');
       let relatedIdValue = relatedModel.attributes[relatedIdAttribute];
 
-      // insert the related model into the index
-      relatedModelIndex.set(relatedIdValue, relatedModel);
-    }
-
-    // attach the relatedModels to the model(s)
-    let {firstRelationName, firstRelationAlias} = parseWithRelation(withRelationText);
-    for (let model of collection.models) {
-      let rModels = [];
-      let rById = {};
-
-      let relatedIdsList = [];
-      let modelId = model.attributes[rd.parentIdAttribute];
-      if (foreignKeyIndex.has(modelId))
-        relatedIdsList = foreignKeyIndex.get(modelId);
-
-      for (let relatedId of relatedIdsList) {
-        if (!relatedModelIndex.has(relatedId)) continue;
-        // Resule the related model.
-        let relatedModel = relatedModelIndex.get(relatedId);
-        // Add the model to the collection.
-        rModels.push(relatedModel);
-        if (relatedIdAttribute in relatedModel.attributes)
-          rById[relatedModel.attributes[relatedIdAttribute]] = relatedModel;
-        rById[relatedModel.cid] = relatedModel;
+      // push the related model to each related model from the collection
+      let modelIdsList = [];
+      if (otherKeyIndex.has(relatedIdValue)) modelIdsList = otherKeyIndex.get(relatedIdValue);
+      for (let modelId of modelIdsList) {
+        if (!modelMap.has(modelId)) continue;
+        // Resolve the model.
+        let model = modelMap.get(modelId);
+        // Get the relation.
+        let newRelation = model.relations[firstRelationAlias];
+        // Add the related model to the relation collection.
+        newRelation.models.push(relatedModel);
+        newRelation._byId[relatedIdValue] = relatedModel;
+        newRelation._byId[relatedModel.cid] = relatedModel;
+        newRelation.length++;
       }
-
-      // add the relation
-      let newRelation = this.getRelation(firstRelationName);
-      newRelation.models = rModels;
-      newRelation._byId = rById;
-      newRelation.length = rModels.length;
-
-      // relations attribute should already exist on each model
-      model.relations[firstRelationAlias] = newRelation;
     }
   };
 
