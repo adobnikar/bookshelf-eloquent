@@ -599,18 +599,18 @@ module.exports = function(Bookshelf, options) {
       let rd = relation.relatedData;
 
       // Check if parent ids required.
-      if ((ids === null) && ((rd.type === 'belongsToMany') ||
-        (rd.type === 'hasMany'))) {
+      if ((rd.type === 'belongsToMany') ||
+        (rd.type === 'hasMany')) {
         // Load ids.
         ids = [];
         // extract the model id for each model
         for (let model of collection.models) {
-          if (!(rd.parentIdAttribute in model.attributes))
-            throw new Error('Failed to eager load the "' + withRelationText +
-              '" relation of the "' + rd.parentTableName +
-              '" model. If you want to eager load a hasMany or ' +
-              'belongsToMany relation of a model then the model ' +
-              'needs to have it\'s id column selected.');
+          if (!(rd.parentIdAttribute in model.attributes)) {
+            throw new Error(`Failed to eager load the ${rd.type} "${withRelationText}" ` +
+              'relation of the "' + rd.parentTableName +
+              `" model. Column "${rd.parentIdAttribute}" needs to be selected ` +
+              'if you want to eager load this relation.');
+          }
 
           // push the model.id into the collection of ids
           ids.push(model.attributes[rd.parentIdAttribute]);
@@ -633,10 +633,9 @@ module.exports = function(Bookshelf, options) {
             [collection, withRelationText]));
           break;
         default:
-          throw new Error('Failed to eager load the "' + withRelationText +
-            '" relation of the "' + rd.parentTableName +
-            '" model. Relation type ' + rd.type +
-            ' not supported/implemented for the with statement.');
+          throw new Error(`Failed to eager load the ${rd.type} "${withRelationText}" ` +
+            `relation of the "${rd.parentTableName}" model. ` +
+            `Relation type "${rd.type}" not supported/implemented for the with statement.`);
       }
     }
 
@@ -705,14 +704,12 @@ module.exports = function(Bookshelf, options) {
     // index the relatedModels by their ids
     let relatedModelIndex = new Map();
     for (let relatedModel of relatedModels.models) {
-      if (!(relatedIdAttribute in relatedModel.attributes))
-        throw new Error('Failed to eager load the "' + withRelationText +
-              '" relation of the "' + rd.parentTableName +
-              '" model. If you want to eager load a belongsToMany ' +
-              'relation of a model then the related model ' +
-              'needs to have the id column selected. ' +
-              'Please add the "' + relatedIdAttribute +
-              '" column to the select statement.');
+      if (!(relatedIdAttribute in relatedModel.attributes)) {
+        throw new Error(`Failed to eager load the ${rd.type} "${withRelationText}" ` +
+          'relation of the "' + rd.parentTableName +
+          `" model. Column "${rd.relatedIdAttribute}" needs to be selected ` +
+          'if you want to eager load this relation.');
+      }
       let relatedIdValue = relatedModel.attributes[relatedIdAttribute];
 
       // push the related model to each related model from the collection
@@ -753,14 +750,12 @@ module.exports = function(Bookshelf, options) {
     // build foreignKey and otherKey indexes
     let foreignKeyIndex = new Map();
     for (let relatedModel of relatedModels.models) {
-      if (!(relatedFkAttribute in relatedModel.attributes))
-        throw new Error('Failed to eager load the "' + withRelationText +
-              '" relation of the "' + rd.parentTableName +
-              '" model. If you want to eager load a hasMany ' +
-              'relation of a model then it\'s related model ' +
-              'needs to have the foreign key column selected. ' +
-              'Please add the "' + relatedFkAttribute +
-              '" column to the select statement.');
+      if (!(relatedFkAttribute in relatedModel.attributes)) {
+        throw new Error(`Failed to eager load the ${rd.type} "${withRelationText}" ` +
+          'relation of the "' + rd.parentTableName +
+          `" model. Column "${rd.relatedFkAttribute}" needs to be selected ` +
+          'if you want to eager load this relation.');
+      }
 
       let foreignKeyValue = relatedModel.attributes[relatedFkAttribute];
       if (foreignKeyValue === null) continue;
@@ -813,14 +808,12 @@ module.exports = function(Bookshelf, options) {
 
     // extract the foreignKey for each model
     for (let model of collection.models) {
-      if (!(relatedFkAttribute in model.attributes))
-        throw new Error('Failed to eager load the "' + withRelationText +
-          '" relation of the "' + rd.parentTableName +
-          '" model. If you want to eager load a belongsTo ' +
-          'relation of a model then the model ' +
-          'needs to have the foreign key column selected. ' +
-          'Please add the "' + relatedFkAttribute +
-          '" column to the select statement.');
+      if (!(relatedFkAttribute in model.attributes)) {
+        throw new Error(`Failed to eager load the ${rd.type} "${withRelationText}" ` +
+          'relation of the "' + rd.parentTableName +
+          `" model. Column "${rd.relatedFkAttribute}" needs to be selected ` +
+          'if you want to eager load this relation.');
+      }
 
       // push the model.foreignKey into the collection of ids
       if (model.attributes[relatedFkAttribute] !== null)
