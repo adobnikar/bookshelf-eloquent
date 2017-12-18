@@ -7,6 +7,7 @@ exports.up = async function(knex, Promise) {
 
     table.increments('id').unsigned().primary();
     table.string('name', 64).notNullable().unique();
+    table.boolean('isTag').notNullable().index().defaultTo(true);
   });
 };
 
