@@ -34,7 +34,7 @@ The `main.js` file contains code that creates a user and a group and then fetche
 
 Steps:
 
-- download the [example.zip](/adobnikar/bookshelf-eloquent/raw/master/example/example.zip) and extract it to a folder,
+- download the [example.zip](./raw/master/example/example.zip) and extract it to a folder,
 - run the `npm install` command or `yarn` (if you have yarn installed) in the folder where you extracted the zip,
 - install knex.js globally with the `npm install knex -g` command,
 - create a mysql database and name it `be_example_schema` (it is recommended that you pick the `utf8_unicode_ci` as the default collation),
