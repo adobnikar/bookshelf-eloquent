@@ -1,0 +1,23 @@
+{
+  "name": "bookshelf-eloquent-example",
+  "version": "1.0.0",
+  "description": "bookshelf eloquent example",
+  "main": "main.js",
+  "scripts": {
+    "start": "node main.js",
+    "lint": "eslint .",
+    "migrate": "node ./node_modules/knex/bin/cli.js migrate:latest",
+    "test": "node ./test.js"
+  },
+  "author": "",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "bookshelf": "0.10.*",
+    "bookshelf-eloquent": "^0.1.15",
+    "bookshelf-paranoia": "0.10.*",
+    "bookshelf-scopes": "^1.5.0",
+    "dotenv": "4.0.*",
+    "knex": "0.12.*",
+    "mysql": "2.13.*"
+  }
+}

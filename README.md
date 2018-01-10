@@ -26,6 +26,24 @@ let bookshelf = require('bookshelf')(knex);
 bookshelf.plugin(require('bookshelf-eloquent'));
 ```
 
+## Example
+
+If you are new to bookshelf this example might help you out.
+The example contains migrations, models and a config `.env` file.
+The `main.js` file contains code that creates a user and a group and then fetches the data from the database and prints it out.
+
+Steps:
+
+- download the [example.zip](https://raw.githubusercontent.com/adobnikar/bookshelf-eloquent/master/example.zip/example.zip) and extract it to a folder,
+- run the `npm install` command or `yarn` (if you have yarn installed) in the folder where you extracted the zip,
+- install knex.js globally with the `npm install knex -g` command,
+- create a mysql database and name it `be_example_schema` (it is recommended that you pick the `utf8_unicode_ci` as the default collation),
+- open the `.env` file and set your mysql password,
+- run the `knex migrate:latest` command in the folder where you extracted the zip,
+- run the `main.js` file with the `node main.js` command or with your favourite debugging tool.
+
+For more examples you can check out the test files in this repository.
+
 ## List of supported relations
 
 - hasOne
